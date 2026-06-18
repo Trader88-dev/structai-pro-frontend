@@ -1,0 +1,43 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  password      String
+  role          String    @default("user")
+  createdAt     DateTime  @default(now())
+  projects      Project[]
+  calculs       Calcul[]
+}
+
+model Project {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  calculs     Calcul[]
+}
+
+model Calcul {
+  id          String   @id @default(cuid())
+  type        String   // poutre-simple, poteau, dalle...
+  title       String
+  inputs      String   // JSON
+  results     String   // JSON
+  createdAt   DateTime @default(now())
+  userId      String
+  projectId   String?
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project     Project? @relation(fields: [projectId], references: [id])
+}
