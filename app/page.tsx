@@ -15,7 +15,7 @@ import { PoutreContinueResults } from "@/components/poutre-continue-results"
 import HistoryPage from "@/components/history-page"
 import { useSession, signOut } from "next-auth/react"
 
-const API = "http://127.0.0.1:8000"
+const API = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"
 
 const API_ENDPOINTS: Record<string, string> = {
   "poutre-simple":   "/calcul/poutre",
