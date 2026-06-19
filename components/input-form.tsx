@@ -33,9 +33,17 @@ const PAGE_FORMS: Record<string, SectionDef[]> = {
       { key:"g_k",  label:"Charge permanente Gk", unit:"kN/m", type:"number", default:15.0, step:0.5 },
       { key:"q_k",  label:"Charge variable Qk",   unit:"kN/m", type:"number", default:10.0, step:0.5 },
     ]},
-    { title: "Matériaux & Norme", fields: [
+    { title: "Charge concentree (optionnel)", fields: [
+      { key:"P_k",  label:"Force P",     unit:"kN", type:"number", default:0, step:5, min:0 },
+      { key:"P_a",  label:"Position a",  unit:"m",  type:"number", default:0, step:0.1, min:0 },
+    ]},
+    { title: "Charge trapezoidale (optionnel)", fields: [
+      { key:"q1_k", label:"q1 gauche",  unit:"kN/m", type:"number", default:0, step:1, min:0 },
+      { key:"q2_k", label:"q2 droite",  unit:"kN/m", type:"number", default:0, step:1, min:0 },
+    ]},
+    { title: "Materiaux & Norme", fields: [
       { key:"norme",           label:"Norme",    unit:"", type:"select", options:NORMES,    default:"EC2" },
-      { key:"beton",           label:"Béton",    unit:"", type:"select", options:BETONS,    default:"C25/30" },
+      { key:"beton",           label:"Beton",    unit:"", type:"select", options:BETONS,    default:"C25/30" },
       { key:"acier",           label:"Acier",    unit:"", type:"select", options:ACIERS,    default:"B500B" },
       { key:"enrobage_classe", label:"Enrobage", unit:"", type:"select", options:ENROBAGES, default:"XC1" },
     ]},
