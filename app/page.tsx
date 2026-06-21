@@ -10,12 +10,13 @@ import { Calculator, Sparkles, Download, RotateCcw } from "lucide-react"
 import AssistantIA from "@/components/assistant-ia"
 import LecturePlans from "@/components/lecture-plans"
 import { BeamSchema } from "@/components/beam-schema"
+import { PoteauSchema, SemelleIsoleeSchema, AcrotereSchema, EscalierSchema, MomentDiagram } from "@/components/structural-schemas"
 import { PdfExportButton } from "@/components/pdf-export"
 import { PoutreContinueResults } from "@/components/poutre-continue-results"
 import HistoryPage from "@/components/history-page"
-import { useSession, signOut } from "next-auth/react"
+import { useSession } from "next-auth/react"
 
-const API = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"
+const API = "https://structai-pro-backend-production.up.railway.app"
 
 const API_ENDPOINTS: Record<string, string> = {
   "poutre-simple":   "/calcul/poutre",
@@ -32,17 +33,22 @@ const API_ENDPOINTS: Record<string, string> = {
   "mur-soutenement": "/calcul/mur-soutenement",
 }
 
-// Mapping des clés d'entrée selon l'endpoint
 function buildBody(inputs: any, pageId: string): any {
-  if (pageId === "poutre-simple") return { ...inputs, portee: inputs.L }
+  if (pageId === "poutre-simple") {
+    const body: any = { ...inputs, portee: inputs.L }
+    if (inputs.P_k && inputs.P_k > 0) {
+      body.charges_concentrees = [{ P_k: inputs.P_k, a: inputs.P_a || inputs.L/2, type_charge: "variable" }]
+    }
+    if ((inputs.q1_k && inputs.q1_k > 0) || (inputs.q2_k && inputs.q2_k > 0)) {
+      body.charges_trapezoidales = [{ q1_k: inputs.q1_k || 0, q2_k: inputs.q2_k || 0, type_charge: "variable" }]
+    }
+    return body
+  }
   if (pageId === "poteau") return { ...inputs, pct_G: (inputs.pct_G||70)/100 }
   if (pageId === "semelle-filante") return { ...inputs, pct_G: (inputs.pct_G||70)/100 }
   if (pageId === "semelle-isolee") return { ...inputs, pct_G: (inputs.pct_G||70)/100 }
   if (pageId === "radier") return { ...inputs, pct_G: (inputs.pct_G||70)/100 }
   if (pageId === "voile") return { ...inputs, pct_G: (inputs.pct_G||70)/100 }
-  if (pageId === "acrotere") return inputs
-  if (pageId === "escalier") return inputs
-  if (pageId === "linteau") return inputs
   if (pageId === "poutre-continue") {
     const nb = inputs.nb_travees || 3
     const travees = []
@@ -59,7 +65,6 @@ function buildBody(inputs: any, pageId: string): any {
       travees,
     }
   }
-  if (pageId === "mur-soutenement") return inputs
   return inputs
 }
 
@@ -71,15 +76,12 @@ export default function Page() {
   const [aiComment, setAiComment] = useState("")
   const [aiLoading, setAiLoading] = useState(false)
   const [error, setError] = useState("")
-
   const schemaRef = useRef<HTMLDivElement>(null)
   const { data: session } = useSession()
   const [saveMsg, setSaveMsg] = useState("")
   const [projet, setProjet] = useState("Projet test")
   const [ingenieur, setIngenieur] = useState("Ing. Dupont")
   const pageInfo = pageTitles[activePage] || { title: activePage, sub: "" }
-  const isIA = activePage === "assistant-ia"
-  const isHistory = activePage === "historique"
   const hasEndpoint = !!API_ENDPOINTS[activePage]
 
   const handleNavigate = (id: string) => {
@@ -130,8 +132,7 @@ export default function Page() {
         body: JSON.stringify({
           type: activePage,
           title: pageInfo.title + " - " + new Date().toLocaleDateString("fr-FR"),
-          inputs,
-          results,
+          inputs, results,
         }),
       })
       if (res.ok) { setSaveMsg("Sauvegardé ✓"); setTimeout(() => setSaveMsg(""), 2000) }
@@ -153,30 +154,19 @@ export default function Page() {
             <Button variant="outline" size="sm" onClick={() => { setResults(null); setAiComment(""); setError("") }}>
               <RotateCcw className="size-4" /> Réinitialiser
             </Button>
-            {results && saveMsg && (
-              <span className="text-sm text-emerald-600 font-medium">{saveMsg}</span>
-            )}
-            {results && (
-              <Button variant="outline" size="sm" onClick={handleSave}>
-                💾 Sauvegarder
-              </Button>
-            )}
+            {results && saveMsg && <span className="text-sm text-emerald-600 font-medium">{saveMsg}</span>}
+            {results && <Button variant="outline" size="sm" onClick={handleSave}>💾 Sauvegarder</Button>}
             {results && (
               <PdfExportButton
-                projet={projet}
-                ingenieur={ingenieur}
-                norme={inputs.norme || "EC2"}
-                activePage={activePage}
-                inputs={inputs}
-                results={results}
-                schemaRef={schemaRef}
+                projet={projet} ingenieur={ingenieur} norme={inputs.norme || "EC2"}
+                activePage={activePage} inputs={inputs} results={results} schemaRef={schemaRef}
               />
             )}
           </div>
         </header>
 
         <main className="flex-1 overflow-y-auto p-6">
-          {isHistory ? (
+          {activePage === "historique" ? (
             <HistoryPage onRestore={(type, inp, res) => {
               handleNavigate(type)
               setTimeout(() => { setInputs(inp); setResults(res) }, 100)
@@ -184,24 +174,49 @@ export default function Page() {
           ) : activePage === "assistant-ia" ? (
             <AssistantIA norme={inputs.norme} beton={inputs.beton} acier={inputs.acier} />
           ) : activePage === "lecture-plans" ? (
-            <div className="flex items-center justify-center min-h-[400px]">
-              <div className="text-center text-muted-foreground">
-                <span className="text-5xl">📐</span>
-                <h2 className="text-lg font-semibold mt-4 mb-2">Lecture de Plans</h2>
-                <p className="text-sm">Upload PDF/image — Interface en cours d&apos;intégration</p>
-              </div>
-            </div>
+            <LecturePlans norme={inputs.norme} beton={inputs.beton} acier={inputs.acier} />
           ) : (
             <>
               {results && <MetricCards results={results} norme={inputs.norme||"EC2"} activePage={activePage} />}
 
               {results && activePage === "poutre-simple" && (
                 <div ref={schemaRef} className="mt-4 rounded-lg border border-border bg-card p-4">
-                  <BeamSchema
-                    b={inputs.b} h={inputs.h} L={inputs.L}
+                  <BeamSchema b={inputs.b} h={inputs.h} L={inputs.L}
                     As={results.As_retenu} choix={results.choix_armatures}
-                    d={results.d} MEd={results.MEd} VEd={results.VEd}
-                  />
+                    d={results.d} MEd={results.MEd} VEd={results.VEd} />
+                </div>
+              )}
+              {results && activePage === "poteau" && (
+                <div ref={schemaRef} className="mt-4 rounded-lg border border-border bg-card p-4">
+                  <PoteauSchema b={inputs.b} h={inputs.h} longueur={inputs.longueur}
+                    As={results.As_retenu} choix={results.choix_armatures}
+                    d={results.d} NEd={results.NEd} lambda_={results.lambda_} />
+                </div>
+              )}
+              {results && activePage === "semelle-isolee" && (
+                <div ref={schemaRef} className="mt-4 rounded-lg border border-border bg-card p-4">
+                  <SemelleIsoleeSchema b_p={inputs.b_p} h_p={inputs.h_p} h_sem={inputs.h_sem}
+                    Ax={results.Ax} Ay={results.Ay}
+                    sigma_max={results.sigma_max} sigma_ok={results.sigma_ok} />
+                </div>
+              )}
+              {results && activePage === "acrotere" && (
+                <div ref={schemaRef} className="mt-4 rounded-lg border border-border bg-card p-4">
+                  <AcrotereSchema h={inputs.h} e={inputs.e}
+                    MEd={results.MEd} NEd={results.NEd} choix={results.choix} />
+                </div>
+              )}
+              {results && activePage === "escalier" && (
+                <div ref={schemaRef} className="mt-4 rounded-lg border border-border bg-card p-4">
+                  <EscalierSchema L_h={inputs.L_h} hauteur={inputs.hauteur}
+                    g_giron={inputs.g_giron} h_contre={inputs.h_contre} ep={inputs.ep}
+                    MEd={results.MEd} As_princ_retenu={results.As_princ_retenu}
+                    choix_princ={results.choix_princ} alpha_deg={results.alpha_deg} />
+                </div>
+              )}
+              {results && activePage === "poutre-continue" && results.travees_res && (
+                <div className="mt-4 rounded-lg border border-border bg-card p-4">
+                  <MomentDiagram travees={results.travees_res} />
                 </div>
               )}
 

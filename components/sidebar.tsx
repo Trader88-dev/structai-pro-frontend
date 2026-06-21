@@ -1,10 +1,11 @@
 "use client"
 
 import { useState } from "react"
+import { signOut } from "next-auth/react"
 import {
   Layers, Box, Building2, Grip, PanelTop, Squircle, Frame,
   GalleryVerticalEnd, Columns3, StretchHorizontal, Footprints,
-  Component, Sparkles, FileSearch, TriangleRight, Clock,
+  Component, Sparkles, FileSearch, Clock, LogOut,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -34,55 +35,53 @@ const groups: NavGroup[] = [
     title: "Structure verticale",
     items: [
       { label: "Poteau BA",  icon: Columns3,  id: "poteau" },
-      { label: "Voile BA",   icon: PanelTop,  id: "voile",   badge: "NEW" },
+      { label: "Voile BA",   icon: PanelTop,  id: "voile",    badge: "NEW" },
       { label: "Acrotère",   icon: Squircle,  id: "acrotere", badge: "NEW" },
     ],
   },
   {
     title: "Poutres",
     items: [
-      { label: "Poutre simple",    icon: GalleryVerticalEnd, id: "poutre-simple" },
-      { label: "Poutre continue",  icon: Grip,               id: "poutre-continue", badge: "NEW" },
+      { label: "Poutre simple",   icon: GalleryVerticalEnd, id: "poutre-simple" },
+      { label: "Poutre continue", icon: Grip,               id: "poutre-continue", badge: "NEW" },
     ],
   },
   {
     title: "Dalles & Planchers",
     items: [
-      { label: "Dalle pleine",  icon: Frame,     id: "dalle-pleine",  badge: "NEW" },
-      { label: "Escalier",      icon: Footprints, id: "escalier",     badge: "NEW" },
-      { label: "Linteau",       icon: Component,  id: "linteau",      badge: "NEW" },
+      { label: "Dalle pleine", icon: Frame,      id: "dalle-pleine",  badge: "NEW" },
+      { label: "Escalier",     icon: Footprints, id: "escalier",      badge: "NEW" },
+      { label: "Linteau",      icon: Component,  id: "linteau",       badge: "NEW" },
     ],
   },
   {
     title: "IA & Outils",
     items: [
-      { label: "Assistant IA",   icon: Sparkles,   id: "assistant-ia",   badge: "IA" },
-      { label: "Lecture plans",  icon: FileSearch, id: "lecture-plans",  badge: "IA" },
-      { label: "Historique",       icon: Clock,      id: "historique",     badge: undefined },
+      { label: "Assistant IA",  icon: Sparkles,   id: "assistant-ia",  badge: "IA" },
+      { label: "Lecture plans", icon: FileSearch, id: "lecture-plans", badge: "IA" },
+      { label: "Historique",    icon: Clock,      id: "historique" },
     ],
   },
 ]
 
-// Titres des pages
 const pageTitles: Record<string, { title: string; sub: string }> = {
-  "poutre-simple":    { title: "Poutre rectangulaire — Flexion simple",    sub: "Flexion simple · ELU + ELS" },
-  "poutre-continue":  { title: "Poutre continue — Méthode de Caquot",      sub: "2 à 5 travées · ELU + ELS" },
-  "poteau":           { title: "Poteau rectangulaire — Compression composée", sub: "Flambement · EC2 / BAEL" },
-  "voile":            { title: "Voile BA — Compression + Flexion composée", sub: "Élancement · EC2 / BAEL" },
-  "acrotere":         { title: "Acrotère — Flexion composée",               sub: "Vent + Séisme EC8" },
-  "semelle-filante":  { title: "Semelle filante — Mur / Voile porteur",     sub: "ELS sol · Flexion · EC2" },
-  "semelle-isolee":   { title: "Semelle isolée — Poteau BA",                sub: "Sol · Flexion · Poinçonnement" },
-  "radier":           { title: "Radier général — Dalle pleine",             sub: "Winkler · EC2 / BAEL" },
-  "mur-soutenement":  { title: "Mur de soutènement BA",                     sub: "Poussée Coulomb · Stabilité · Ferraillage" },
-  "dalle-pleine":     { title: "Dalle pleine bidirectionnelle",             sub: "Marcus · ELU + ELS · EC2" },
-  "escalier":         { title: "Escalier BA — Paillasse inclinée",          sub: "Flexion simple · EC2 / BAEL" },
-  "linteau":          { title: "Linteau BA — Flexion simple",               sub: "ELU + Cisaillement · EC2" },
-  "assistant-ia":     { title: "Assistant IA — Ingénieur Structural",       sub: "Claude · EC2 · BAEL · EC8" },
-  "lecture-plans":    { title: "Lecture et Analyse de Plans",               sub: "Vision IA · Extraction automatique" },
-  "historique":       { title: "Historique des calculs",                    sub: "Vos calculs sauvegardés" },
+  "poutre-simple":   { title: "Poutre rectangulaire — Flexion simple",       sub: "Flexion simple · ELU + ELS" },
+  "poutre-continue": { title: "Poutre continue — Méthode de Caquot",         sub: "2 à 5 travées · ELU + ELS" },
+  "poteau":          { title: "Poteau rectangulaire — Compression composée",  sub: "Flambement · EC2 / BAEL" },
+  "voile":           { title: "Voile BA — Compression + Flexion composée",    sub: "Élancement · EC2 / BAEL" },
+  "acrotere":        { title: "Acrotère — Flexion composée",                  sub: "Vent + Séisme EC8" },
+  "semelle-filante": { title: "Semelle filante — Mur / Voile porteur",        sub: "ELS sol · Flexion · EC2" },
+  "semelle-isolee":  { title: "Semelle isolée — Poteau BA",                   sub: "Sol · Flexion · Poinçonnement" },
+  "radier":          { title: "Radier général — Dalle pleine",                sub: "Winkler · EC2 / BAEL" },
+  "mur-soutenement": { title: "Mur de soutènement BA",                        sub: "Poussée Coulomb · Stabilité · Ferraillage" },
+  "dalle-pleine":    { title: "Dalle pleine bidirectionnelle",                sub: "Marcus · ELU + ELS · EC2" },
+  "escalier":        { title: "Escalier BA — Paillasse inclinée",             sub: "Flexion simple · EC2 / BAEL" },
+  "linteau":         { title: "Linteau BA — Flexion simple",                  sub: "ELU + Cisaillement · EC2" },
+  "assistant-ia":    { title: "Assistant IA — Ingénieur Structural",          sub: "Claude · EC2 · BAEL · EC8" },
+  "lecture-plans":   { title: "Lecture et Analyse de Plans",                  sub: "Vision IA · Extraction automatique" },
+  "historique":      { title: "Historique des calculs",                       sub: "Vos calculs sauvegardés" },
 }
 
-// Export du contexte actif pour page.tsx
 export let activePageId = "poutre-simple"
 
 export function Sidebar({ onNavigate, projet, onProjetChange, ingenieur, onIngenieurChange }: {
@@ -93,7 +92,6 @@ export function Sidebar({ onNavigate, projet, onProjetChange, ingenieur, onIngen
   onIngenieurChange?: (v: string) => void
 }) {
   const [active, setActive] = useState("poutre-simple")
-
 
   const navigate = (id: string) => {
     setActive(id)
@@ -149,7 +147,7 @@ export function Sidebar({ onNavigate, projet, onProjetChange, ingenieur, onIngen
         ))}
       </nav>
 
-      {/* Projet + user */}
+      {/* Projet + user + déconnexion */}
       <div className="border-t border-border px-4 py-3 flex flex-col gap-2">
         <div>
           <p className="text-[10px] text-muted-foreground mb-1">Projet actif</p>
@@ -173,10 +171,17 @@ export function Sidebar({ onNavigate, projet, onProjetChange, ingenieur, onIngen
           <div className="flex size-8 items-center justify-center rounded-full bg-secondary text-xs font-semibold text-secondary-foreground">
             ME
           </div>
-          <div className="flex flex-col leading-tight">
+          <div className="flex flex-col leading-tight flex-1">
             <span className="text-xs font-medium text-sidebar-foreground">M. Eng.</span>
             <span className="text-[11px] text-muted-foreground">Pro · v1.0</span>
           </div>
+          <button
+            onClick={() => signOut({ callbackUrl: "/" })}
+            title="Se déconnecter"
+            className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-red-50 hover:text-red-600"
+          >
+            <LogOut className="size-4" />
+          </button>
         </div>
       </div>
     </aside>

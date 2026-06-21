@@ -14,6 +14,7 @@ export async function POST(req: NextRequest) {
     const user = await prisma.user.create({ data: { name, email, password: hashed } })
     return NextResponse.json({ id: user.id, email: user.email, name: user.name })
   } catch (e) {
-    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 })
+    console.error("ERREUR:", e)
+    return NextResponse.json({ error: String(e) }, { status: 500 })
   }
 }

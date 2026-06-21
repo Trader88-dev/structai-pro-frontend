@@ -77,6 +77,30 @@ function getMetrics(results: any, page: string, norme: string) {
       { label:"σmax sol", value:String(results.sigma_max), unit:"kPa", badge:results.portance_ok?"✓ OK":"✗ Dépassé", status:results.portance_ok?"ok":"danger", hint:`Ka=${results.Ka}` },
       { label:"As voile", value:String(results.As_voile_retenu), unit:"mm²/ml", badge:results.choix_voile, status:"ok", hint:"Nappe exposée" },
     ],
+    "escalier": [
+      { label:"α paillasse", value:String(results.alpha_deg), unit:"°", badge:"Inclinaison", status:"ok" as Status, hint:`L inclinée = ${results.L_inclinee} m` },
+      { label:"MEd", value:String(results.MEd), unit:"kN.m", badge:"ELU", status:"ok" as Status, hint:`VEd = ${results.VEd} kN` },
+      { label:"As princ.", value:String(results.As_princ_retenu), unit:"mm²/ml", badge:results.choix_princ, status:"ok" as Status, hint:`calc=${results.As_princ_calc}` },
+      { label:"Flèche", value:"—", unit:"", badge:results.fleche_ok?"✓ OK":"✗ Dépasse", status:(results.fleche_ok?"ok":"warn") as Status, hint:"L/d vérifié" },
+    ],
+    "linteau": [
+      { label:"MEd", value:String(results.MEd), unit:"kN.m", badge:"ELU", status:"ok" as Status, hint:`VEd = ${results.VEd} kN` },
+      { label:"μ", value:String(results.mu), unit:"—", badge:results.mu<=0.372?"≤0.372 ✓":">0.372 ✗", status:(results.mu<=0.372?"ok":"danger") as Status, hint:"Pivot A" },
+      { label:"As retenu", value:String(results.As_retenu), unit:"mm²", badge:results.choix, status:"ok" as Status, hint:`calc=${results.As_calc}` },
+      { label:"Cisaillement", value:String(results.VEd), unit:"kN", badge:!results.armatures_cis?"✓ Béton":"⚠ Cadres", status:(!results.armatures_cis?"ok":"warn") as Status, hint:`VRd,c=${results.VRd_c} kN` },
+    ],
+    "acrotere": [
+      { label:"MEd", value:String(results.MEd), unit:"kN.m", badge:results.cas_dim||"Dim.", status:"ok" as Status, hint:`NEd=${results.NEd} kN` },
+      { label:"e totale", value:String(results.etot), unit:"mm", badge:"Excentricité", status:"ok" as Status, hint:`d=${results.d} mm` },
+      { label:"As retenu", value:String(results.As_retenu), unit:"mm²/ml", badge:results.choix||"—", status:"ok" as Status, hint:`min=${results.As_min}` },
+      { label:"σ béton", value:String(results.sigma_beton), unit:"MPa", badge:results.sigma_ok?"✓ OK":"✗ Dépasse", status:(results.sigma_ok?"ok":"danger") as Status, hint:"Encastrement" },
+    ],
+    "semelle-isolee": [
+      { label:"Dim. semelle", value:`${results.Ax}×${results.Ay}`, unit:"m", badge:`S=${results.surface}m²`, status:"ok" as Status, hint:"Dimensions retenues" },
+      { label:"σmax ELS", value:String(results.sigma_max), unit:"kPa", badge:results.sigma_ok?"✓ OK":"✗ Dépassé", status:(results.sigma_ok?"ok":"danger") as Status, hint:`σmoy=${results.sigma_moy} kPa` },
+      { label:"As x", value:String(results.As_x_retenu), unit:"mm²/ml", badge:results.choix_x, status:"ok" as Status, hint:`calc=${results.As_x_calc}` },
+      { label:"Poinçonnement", value:String(results.VEd_poinc), unit:"kN", badge:results.poinconnement_ok?"✓ OK":"✗ Dépasse", status:(results.poinconnement_ok?"ok":"danger") as Status, hint:`VRd,c=${results.VRd_c_poinc} kN` },
+    ],
   }
 
   return maps[page] || [
