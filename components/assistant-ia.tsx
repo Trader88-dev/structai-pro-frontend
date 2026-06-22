@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Sparkles, Send, Trash2, Zap, BarChart3, AlertTriangle, FileText } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-const API = "http://127.0.0.1:8000"
+const API = "https://structai-pro-backend-production.up.railway.app"
 
 type Msg = { role: "user" | "assistant"; content: string }
 
