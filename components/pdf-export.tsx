@@ -45,7 +45,6 @@ export function PdfExportButton({
 
     setLoading(true)
     try {
-      // Adapter les inputs selon le module
       let processedInputs = { ...inputs }
 
       if (activePage === "poutre-simple") {
@@ -111,6 +110,3 @@ export function PdfExportButton({
     </Button>
   )
 }
-
-
-
