@@ -34,8 +34,14 @@ const API_ENDPOINTS: Record<string, string> = {
 }
 
 function buildBody(inputs: any, pageId: string): any {
-  const body = {
-  ...inputs,
+  
+let processedInputs = { ...inputs }
+if (activePage === "poutre-simple") processedInputs = { ...processedInputs, portee: inputs.L }
+if (["poteau","semelle-filante","semelle-isolee","radier","voile"].includes(activePage)) {
+  processedInputs = { ...processedInputs, pct_G: (inputs.pct_G || 70) / 100 }
+}
+const body = {
+  ...processedInputs,
   projet: projet || "Projet",
   ingenieur: ingenieur || "Ingénieur",
 }
