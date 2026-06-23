@@ -34,8 +34,11 @@ const API_ENDPOINTS: Record<string, string> = {
 }
 
 function buildBody(inputs: any, pageId: string): any {
-  if (pageId === "poutre-simple") {
-    const body: any = { ...inputs, portee: inputs.L }
+  const body = {
+  ...inputs,
+  projet: projet || "Projet",
+  ingenieur: ingenieur || "Ingénieur",
+}
     if (inputs.P_k && inputs.P_k > 0) {
       body.charges_concentrees = [{ P_k: inputs.P_k, a: inputs.P_a || inputs.L/2, type_charge: "variable" }]
     }
