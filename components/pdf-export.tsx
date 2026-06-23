@@ -45,8 +45,34 @@ export function PdfExportButton({
 
     setLoading(true)
     try {
+      // Adapter les inputs selon le module
+      let processedInputs = { ...inputs }
+
+      if (activePage === "poutre-simple") {
+        processedInputs = { ...processedInputs, portee: inputs.L }
+      }
+      if (["poteau", "semelle-filante", "semelle-isolee", "radier", "voile"].includes(activePage)) {
+        processedInputs = { ...processedInputs, pct_G: (inputs.pct_G || 70) / 100 }
+      }
+      if (activePage === "poutre-continue") {
+        const nb = inputs.nb_travees || 3
+        const travees = []
+        for (let i = 1; i <= nb; i++) {
+          travees.push({ L: inputs["L" + i] || 5.0, g_k: inputs["g" + i] || 15.0, q_k: inputs["q" + i] || 10.0 })
+        }
+        processedInputs = {
+          b: inputs.b, h: inputs.h,
+          appui_gauche: inputs.appui_gauche || "appuye",
+          appui_droit: inputs.appui_droit || "appuye",
+          beton: inputs.beton, acier: inputs.acier,
+          enrobage_classe: inputs.enrobage_classe,
+          norme: inputs.norme,
+          travees,
+        }
+      }
+
       const body = {
-        ...inputs,
+        ...processedInputs,
         projet: projet || "Projet",
         ingenieur: ingenieur || "Ingénieur",
       }
@@ -85,4 +111,5 @@ export function PdfExportButton({
     </Button>
   )
 }
+
 
