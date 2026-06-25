@@ -30,7 +30,6 @@ function MetricCard({ label, value, unit, badge, status, hint }: {
   )
 }
 
-// Génère les métriques clés selon la page
 function getMetrics(results: any, page: string, norme: string) {
   const mu_lim = norme === "EC2" ? 0.372 : 0.186
 
@@ -58,6 +57,12 @@ function getMetrics(results: any, page: string, norme: string) {
       { label:"Mx travée", value:String(results.Mx_trav), unit:"kN.m/ml", badge:"Marcus", status:"ok", hint:`My = ${results.My_trav}` },
       { label:"As x inf", value:String(results.As_x_inf_retenu), unit:"mm²/ml", badge:results.choix_x_inf, status:"ok", hint:`min=${results.As_x_inf_min}` },
       { label:"Flèche", value:String(results.fleche_calculee), unit:"mm", badge:results.fleche_ok?"✓ OK":"✗ Dépassé", status:results.fleche_ok?"ok":"danger", hint:`adm=${results.fleche_admissible} mm` },
+    ],
+    "poutre-continue": [
+      { label:"Travées", value:String(results.travees_res?.length||"—"), unit:"", badge:"Caquot", status:"ok" as Status, hint:"Méthode forfaitaire" },
+      { label:"M max travée", value:String(results.travees_res?.[0]?.M_trav||"—"), unit:"kN.m", badge:"ELU", status:"ok" as Status, hint:"Travée 1" },
+      { label:"As max", value:String(results.travees_res?.[0]?.As_trav_retenu||"—"), unit:"mm²", badge:results.travees_res?.[0]?.choix_trav||"—", status:"ok" as Status, hint:"Travée 1" },
+      { label:"Flèche T1", value:String(results.travees_res?.[0]?.fleche||"—"), unit:"mm", badge:results.travees_res?.[0]?.fleche_ok?"✓ OK":"✗ Dépasse", status:(results.travees_res?.[0]?.fleche_ok?"ok":"warn") as Status, hint:`adm=${results.travees_res?.[0]?.fleche_adm} mm` },
     ],
     "voile": [
       { label:"NEd", value:String(results.NEd), unit:"kN", badge:"ELU", status:"ok", hint:`MEd=${results.MEd_tot} kN.m` },
@@ -103,10 +108,7 @@ function getMetrics(results: any, page: string, norme: string) {
     ],
   }
 
-  return maps[page] || [
-    { label:"Résultat 1", value:String(Object.values(results)[1]||"—"), unit:"", badge:"OK", status:"ok", hint:"" },
-    { label:"Résultat 2", value:String(Object.values(results)[2]||"—"), unit:"", badge:"OK", status:"ok", hint:"" },
-  ]
+  return maps[page] || []
 }
 
 export function MetricCards({ results, norme, activePage }: { results: any; norme: string; activePage: string }) {
