@@ -1,11 +1,11 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { signIn } from "next-auth/react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Box, Loader2, Eye, EyeOff, CheckCircle2 } from "lucide-react"
+import { Box, Loader2, Eye, EyeOff } from "lucide-react"
 
-export default function LoginPage() {
+function LoginForm() {
   const [mode, setMode]         = useState<"login"|"register">("login")
   const [name, setName]         = useState("")
   const [email, setEmail]       = useState("")
@@ -47,7 +47,6 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex">
-      {/* Panneau gauche — branding */}
       <div className="hidden lg:flex lg:w-1/2 bg-[#0C1929] flex-col justify-between p-12">
         <div className="flex items-center gap-3">
           <div className="flex size-9 items-center justify-center rounded-lg bg-[#185FA5]">
@@ -55,7 +54,6 @@ export default function LoginPage() {
           </div>
           <span className="text-white font-semibold text-lg">StructAI Pro</span>
         </div>
-
         <div>
           <h1 className="text-4xl font-bold text-white leading-tight mb-4">
             Calculez plus vite.<br/>
@@ -64,7 +62,6 @@ export default function LoginPage() {
           <p className="text-slate-400 text-base leading-relaxed max-w-sm">
             Assistant IA pour le dimensionnement béton armé. EC2, BAEL, notes de calcul PDF professionnelles.
           </p>
-
           <div className="mt-10 space-y-4">
             {[
               { icon: "⚡", text: "12 modules de calcul EC2 et BAEL" },
@@ -78,17 +75,11 @@ export default function LoginPage() {
             ))}
           </div>
         </div>
-
-        <p className="text-slate-600 text-xs">
-          © 2026 StructAI Pro — EC2 · BAEL · EC8
-        </p>
+        <p className="text-slate-600 text-xs">© 2026 StructAI Pro — EC2 · BAEL · EC8</p>
       </div>
 
-      {/* Panneau droit — formulaire */}
       <div className="flex-1 flex items-center justify-center p-6 bg-[#F8F9FA]">
         <div className="w-full max-w-md">
-
-          {/* Logo mobile */}
           <div className="flex lg:hidden items-center justify-center gap-3 mb-8">
             <div className="flex size-9 items-center justify-center rounded-lg bg-[#185FA5]">
               <Box className="size-5 text-white" />
@@ -99,29 +90,14 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* Card */}
           <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-8">
-
-            {/* Tabs */}
             <div className="flex rounded-xl bg-gray-100 p-1 mb-6">
-              <button
-                onClick={() => { setMode("login"); setError("") }}
-                className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${
-                  mode === "login"
-                    ? "bg-white text-gray-900 shadow-sm"
-                    : "text-gray-500 hover:text-gray-700"
-                }`}
-              >
+              <button onClick={() => { setMode("login"); setError("") }}
+                className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${mode === "login" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>
                 Se connecter
               </button>
-              <button
-                onClick={() => { setMode("register"); setError("") }}
-                className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${
-                  mode === "register"
-                    ? "bg-white text-gray-900 shadow-sm"
-                    : "text-gray-500 hover:text-gray-700"
-                }`}
-              >
+              <button onClick={() => { setMode("register"); setError("") }}
+                className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${mode === "register" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>
                 Créer un compte
               </button>
             </div>
@@ -134,52 +110,30 @@ export default function LoginPage() {
               {mode === "register" && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">Nom complet</label>
-                  <input
-                    type="text" value={name} onChange={e => setName(e.target.value)}
-                    placeholder="Jean Dupont"
-                    className="w-full h-11 px-3 rounded-lg border border-gray-200 bg-gray-50 text-sm outline-none focus:border-[#185FA5] focus:bg-white transition-colors"
-                  />
+                  <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="Jean Dupont"
+                    className="w-full h-11 px-3 rounded-lg border border-gray-200 bg-gray-50 text-sm outline-none focus:border-[#185FA5] focus:bg-white transition-colors" />
                 </div>
               )}
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
-                <input
-                  type="email" value={email} onChange={e => setEmail(e.target.value)}
-                  placeholder="ingenieur@bet.fr" required
-                  className="w-full h-11 px-3 rounded-lg border border-gray-200 bg-gray-50 text-sm outline-none focus:border-[#185FA5] focus:bg-white transition-colors"
-                />
+                <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="ingenieur@bet.fr" required
+                  className="w-full h-11 px-3 rounded-lg border border-gray-200 bg-gray-50 text-sm outline-none focus:border-[#185FA5] focus:bg-white transition-colors" />
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Mot de passe</label>
                 <div className="relative">
-                  <input
-                    type={showPass ? "text" : "password"} value={password}
-                    onChange={e => setPassword(e.target.value)}
+                  <input type={showPass ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)}
                     placeholder="••••••••" required minLength={6}
-                    className="w-full h-11 px-3 pr-10 rounded-lg border border-gray-200 bg-gray-50 text-sm outline-none focus:border-[#185FA5] focus:bg-white transition-colors"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPass(!showPass)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  >
+                    className="w-full h-11 px-3 pr-10 rounded-lg border border-gray-200 bg-gray-50 text-sm outline-none focus:border-[#185FA5] focus:bg-white transition-colors" />
+                  <button type="button" onClick={() => setShowPass(!showPass)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
                     {showPass ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                   </button>
                 </div>
               </div>
-
-              {error && (
-                <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2.5 text-sm text-red-700">
-                  {error}
-                </div>
-              )}
-
-              <button
-                type="submit" disabled={loading}
-                className="h-11 rounded-lg bg-[#185FA5] text-white text-sm font-medium hover:bg-[#1451A0] disabled:opacity-50 flex items-center justify-center gap-2 mt-1 transition-colors"
-              >
+              {error && <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2.5 text-sm text-red-700">{error}</div>}
+              <button type="submit" disabled={loading}
+                className="h-11 rounded-lg bg-[#185FA5] text-white text-sm font-medium hover:bg-[#1451A0] disabled:opacity-50 flex items-center justify-center gap-2 mt-1 transition-colors">
                 {loading && <Loader2 className="size-4 animate-spin" />}
                 {mode === "login" ? "Accéder à StructAI Pro" : "Créer mon compte"}
               </button>
@@ -188,12 +142,18 @@ export default function LoginPage() {
 
           <p className="text-center text-xs text-gray-400 mt-5">
             En continuant, vous acceptez nos{" "}
-            <a href="https://structaipro.com/cgu" className="text-[#185FA5] hover:underline">
-              conditions d&apos;utilisation
-            </a>
+            <a href="https://structaipro.com/cgu" className="text-[#185FA5] hover:underline">conditions d&apos;utilisation</a>
           </p>
         </div>
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
   )
 }
