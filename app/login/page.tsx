@@ -5,9 +5,6 @@ import { signIn } from "next-auth/react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Boxes, Mail, Lock, Eye, EyeOff, ArrowRight, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 
 function StructuralIllustration() {
   return (
@@ -42,10 +39,6 @@ function StructuralIllustration() {
         </g>
       ))}
       <text x="200" y="50" textAnchor="middle" fill="#dc2626" fontSize="11" fontFamily="Inter, sans-serif" fontWeight="500">q = 15 kN/m</text>
-      <line x1="80" y1="155" x2="95" y2="155" stroke="#94a3b8" strokeWidth="1" strokeDasharray="3 2" />
-      <text x="98" y="159" fill="#64748b" fontSize="9" fontFamily="Inter, sans-serif">A</text>
-      <line x1="320" y1="155" x2="305" y2="155" stroke="#94a3b8" strokeWidth="1" strokeDasharray="3 2" />
-      <text x="295" y="159" fill="#64748b" fontSize="9" fontFamily="Inter, sans-serif">B</text>
       <circle cx="200" cy="100" r="3" fill="#22c55e" />
       <line x1="193" y1="97" x2="185" y2="90" stroke="#22c55e" strokeWidth="1" />
       <text x="175" y="88" fill="#16a34a" fontSize="9" fontFamily="Inter, sans-serif">S1</text>
@@ -66,7 +59,7 @@ function TestimonialCard() {
         ))}
       </div>
       <p className="text-sm text-gray-700 leading-relaxed mb-3">
-        "StructAI Pro m&apos;a fait gagner 3h par projet. Les calculs BAEL sont automatisés et je peux exporter les notes de calcul directement."
+        &quot;StructAI Pro m&apos;a fait gagner 3h par projet. Les calculs BAEL sont automatisés et je peux exporter les notes de calcul directement.&quot;
       </p>
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center">
@@ -80,6 +73,8 @@ function TestimonialCard() {
     </div>
   )
 }
+
+const inputClass = "w-full h-11 rounded-lg border border-gray-200 bg-gray-50 text-sm text-gray-900 outline-none px-3 transition-colors focus:border-blue-500 focus:bg-white placeholder:text-gray-400"
 
 function LoginPageContent() {
   const router = useRouter()
@@ -137,7 +132,7 @@ function LoginPageContent() {
             <span className="text-gray-900 font-semibold text-[15px]">StructAI Pro</span>
           </div>
 
-          {/* Titre dynamique */}
+          {/* Titre */}
           <h1 className="text-3xl font-bold text-gray-900 tracking-tight mb-2">
             {activeTab === "login" ? "Bon retour 👋" : "Créer un compte"}
           </h1>
@@ -147,102 +142,106 @@ function LoginPageContent() {
               : "Commencez gratuitement, sans carte bancaire"}
           </p>
 
-          {/* Onglets */}
-          <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v as "login" | "register"); setError("") }} className="mb-2">
-            <TabsList className="w-full bg-gray-100 h-11 p-1 rounded-lg mb-6">
-              <TabsTrigger value="login"
-                className="w-1/2 data-[state=active]:bg-white data-[state=active]:shadow-sm h-9 rounded-md text-sm font-medium data-[state=active]:text-gray-900 text-gray-500">
-                Se connecter
-              </TabsTrigger>
-              <TabsTrigger value="register"
-                className="w-1/2 data-[state=active]:bg-white data-[state=active]:shadow-sm h-9 rounded-md text-sm font-medium data-[state=active]:text-gray-900 text-gray-500">
-                Créer un compte
-              </TabsTrigger>
-            </TabsList>
+          {/* Tab switcher natif */}
+          <div className="flex rounded-xl bg-gray-100 p-1 mb-8">
+            <button
+              onClick={() => { setActiveTab("login"); setError("") }}
+              className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${activeTab === "login" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>
+              Se connecter
+            </button>
+            <button
+              onClick={() => { setActiveTab("register"); setError("") }}
+              className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${activeTab === "register" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>
+              Créer un compte
+            </button>
+          </div>
 
-            {/* ── Formulaire LOGIN ── */}
-            <TabsContent value="login">
-              <form onSubmit={handleLogin} className="space-y-5">
-                <div className="space-y-2">
-                  <Label htmlFor="email-login" className="text-sm font-medium text-gray-700">Email</Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <Input id="email-login" type="email" placeholder="vous@exemple.com"
-                      value={email} onChange={e => setEmail(e.target.value)} required
-                      className="h-11 pl-10 border-gray-200 focus:border-blue-500 focus:ring-blue-500" />
-                  </div>
+          {/* ── Formulaire LOGIN ── */}
+          {activeTab === "login" && (
+            <form onSubmit={handleLogin} className="flex flex-col gap-5">
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="email-login" className="text-sm font-medium text-gray-700">Email</label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input id="email-login" type="email" placeholder="vous@exemple.com"
+                    value={email} onChange={e => setEmail(e.target.value)} required
+                    className={`${inputClass} pl-10`} />
                 </div>
+              </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="password-login" className="text-sm font-medium text-gray-700">Mot de passe</Label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <Input id="password-login" type={showPass ? "text" : "password"} placeholder="••••••••"
-                      value={password} onChange={e => setPassword(e.target.value)} required minLength={6}
-                      className="h-11 pl-10 pr-10 border-gray-200 focus:border-blue-500 focus:ring-blue-500" />
-                    <button type="button" onClick={() => setShowPass(!showPass)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                      {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="password-login" className="text-sm font-medium text-gray-700">Mot de passe</label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input id="password-login" type={showPass ? "text" : "password"} placeholder="••••••••"
+                    value={password} onChange={e => setPassword(e.target.value)} required minLength={6}
+                    className={`${inputClass} pl-10 pr-10`} />
+                  <button type="button" onClick={() => setShowPass(!showPass)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                    {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
                 </div>
+              </div>
 
-                {error && (
-                  <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2.5 text-sm text-red-700">{error}</div>
-                )}
+              {error && (
+                <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2.5 text-sm text-red-700">{error}</div>
+              )}
 
-                <Button type="submit" disabled={loading}
-                  className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg flex items-center justify-center gap-2">
-                  {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Connexion...</> : <>Accéder à StructAI Pro <ArrowRight className="w-4 h-4" /></>}
-                </Button>
-              </form>
-            </TabsContent>
+              <Button type="submit" disabled={loading}
+                className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg flex items-center justify-center gap-2">
+                {loading
+                  ? <><Loader2 className="w-4 h-4 animate-spin" /> Connexion...</>
+                  : <>Accéder à StructAI Pro <ArrowRight className="w-4 h-4" /></>}
+              </Button>
+            </form>
+          )}
 
-            {/* ── Formulaire REGISTER ── */}
-            <TabsContent value="register">
-              <form onSubmit={handleRegister} className="space-y-5">
-                <div className="space-y-2">
-                  <Label htmlFor="name" className="text-sm font-medium text-gray-700">Nom complet</Label>
-                  <Input id="name" type="text" placeholder="Jean Dupont"
-                    value={name} onChange={e => setName(e.target.value)} required
-                    className="h-11 border-gray-200 focus:border-blue-500 focus:ring-blue-500" />
+          {/* ── Formulaire REGISTER ── */}
+          {activeTab === "register" && (
+            <form onSubmit={handleRegister} className="flex flex-col gap-5">
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="name" className="text-sm font-medium text-gray-700">Nom complet</label>
+                <input id="name" type="text" placeholder="Jean Dupont"
+                  value={name} onChange={e => setName(e.target.value)} required
+                  className={inputClass} />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="email-register" className="text-sm font-medium text-gray-700">Email professionnel</label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input id="email-register" type="email" placeholder="vous@entreprise.com"
+                    value={email} onChange={e => setEmail(e.target.value)} required
+                    className={`${inputClass} pl-10`} />
                 </div>
+              </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="email-register" className="text-sm font-medium text-gray-700">Email professionnel</Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <Input id="email-register" type="email" placeholder="vous@entreprise.com"
-                      value={email} onChange={e => setEmail(e.target.value)} required
-                      className="h-11 pl-10 border-gray-200 focus:border-blue-500 focus:ring-blue-500" />
-                  </div>
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="password-register" className="text-sm font-medium text-gray-700">Mot de passe</label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input id="password-register" type={showPass ? "text" : "password"} placeholder="Minimum 6 caractères"
+                    value={password} onChange={e => setPassword(e.target.value)} required minLength={6}
+                    className={`${inputClass} pl-10 pr-10`} />
+                  <button type="button" onClick={() => setShowPass(!showPass)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                    {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
                 </div>
+              </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="password-register" className="text-sm font-medium text-gray-700">Mot de passe</Label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <Input id="password-register" type={showPass ? "text" : "password"} placeholder="Minimum 6 caractères"
-                      value={password} onChange={e => setPassword(e.target.value)} required minLength={6}
-                      className="h-11 pl-10 pr-10 border-gray-200 focus:border-blue-500 focus:ring-blue-500" />
-                    <button type="button" onClick={() => setShowPass(!showPass)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                      {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </div>
+              {error && (
+                <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2.5 text-sm text-red-700">{error}</div>
+              )}
 
-                {error && (
-                  <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2.5 text-sm text-red-700">{error}</div>
-                )}
-
-                <Button type="submit" disabled={loading}
-                  className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg flex items-center justify-center gap-2">
-                  {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Création...</> : <>Créer mon compte <ArrowRight className="w-4 h-4" /></>}
-                </Button>
-              </form>
-            </TabsContent>
-          </Tabs>
+              <Button type="submit" disabled={loading}
+                className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg flex items-center justify-center gap-2">
+                {loading
+                  ? <><Loader2 className="w-4 h-4 animate-spin" /> Création...</>
+                  : <>Créer mon compte <ArrowRight className="w-4 h-4" /></>}
+              </Button>
+            </form>
+          )}
 
           {/* CGU */}
           <p className="text-xs text-gray-500 text-center mt-6">
