@@ -1,318 +1,260 @@
 "use client"
 
-import { useState, useRef } from "react"
-import { Sidebar, pageTitles } from "@/components/sidebar"
-import { MetricCards } from "@/components/metric-cards"
-import { InputForm, getDefaultInputs } from "@/components/input-form"
-import { ResultsPanel } from "@/components/results-panel"
-import { Button } from "@/components/ui/button"
-import { Calculator, Sparkles, RotateCcw } from "lucide-react"
-import AssistantIA from "@/components/assistant-ia"
-import LecturePlans from "@/components/lecture-plans"
-import { BeamSchema } from "@/components/beam-schema"
-import { PoteauSchema, SemelleIsoleeSchema, AcrotereSchema, EscalierSchema, MomentDiagram } from "@/components/structural-schemas"
-import { PdfExportButton } from "@/components/pdf-export"
-import { PoutreContinueResults } from "@/components/poutre-continue-results"
-import HistoryPage from "@/components/history-page"
-import { useSession } from "next-auth/react"
+import { useState } from "react"
+import { signOut } from "next-auth/react"
+import {
+  Layers, Box, Building2, Grip, PanelTop, Squircle, Frame,
+  GalleryVerticalEnd, Columns3, StretchHorizontal, Footprints,
+  Component, Sparkles, FileSearch, Clock, LogOut, Menu, X,
+} from "lucide-react"
+import { cn } from "@/lib/utils"
 
-const API = "https://structai-pro-backend-production.up.railway.app"
-
-const API_ENDPOINTS: Record<string, string> = {
-  "poutre-simple":   "/calcul/poutre",
-  "poteau":          "/calcul/poteau",
-  "semelle-filante": "/calcul/semelle",
-  "radier":          "/calcul/radier",
-  "dalle-pleine":    "/calcul/dalle",
-  "poutre-continue": "/calcul/poutre-continue",
-  "voile":           "/calcul/voile",
-  "escalier":        "/calcul/escalier",
-  "acrotere":        "/calcul/acrotere",
-  "semelle-isolee":  "/calcul/semelle-isolee",
-  "linteau":         "/calcul/linteau",
-  "mur-soutenement": "/calcul/mur-soutenement",
+type NavItem = {
+  label: string
+  icon: React.ElementType
+  id: string
+  badge?: "NEW" | "IA" | "bientôt"
 }
 
-function buildBody(inputs: any, pageId: string): any {
-  if (pageId === "poutre-simple") {
-    const body: any = { ...inputs, portee: inputs.L }
-    if (inputs.P_k && inputs.P_k > 0) {
-      body.charges_concentrees = [{ P_k: inputs.P_k, a: inputs.P_a || inputs.L/2, type_charge: "variable" }]
-    }
-    if ((inputs.q1_k && inputs.q1_k > 0) || (inputs.q2_k && inputs.q2_k > 0)) {
-      body.charges_trapezoidales = [{ q1_k: inputs.q1_k || 0, q2_k: inputs.q2_k || 0, type_charge: "variable" }]
-    }
-    return body
-  }
-  if (pageId === "poteau") return { ...inputs, pct_G: (inputs.pct_G||70)/100 }
-  if (pageId === "semelle-filante") return { ...inputs, pct_G: (inputs.pct_G||70)/100 }
-  if (pageId === "semelle-isolee") return { ...inputs, pct_G: (inputs.pct_G||70)/100 }
-  if (pageId === "radier") return { ...inputs, pct_G: (inputs.pct_G||70)/100 }
-  if (pageId === "voile") return { ...inputs, pct_G: (inputs.pct_G||70)/100 }
-  if (pageId === "poutre-continue") {
-    const nb = inputs.nb_travees || 3
-    const travees = []
-    for (let i = 1; i <= nb; i++) {
-      travees.push({ L: inputs["L"+i] || 5.0, g_k: inputs["g"+i] || 15.0, q_k: inputs["q"+i] || 10.0 })
-    }
-    return {
-      b: inputs.b, h: inputs.h,
-      appui_gauche: inputs.appui_gauche || "appuye",
-      appui_droit:  inputs.appui_droit  || "appuye",
-      beton: inputs.beton, acier: inputs.acier,
-      enrobage_classe: inputs.enrobage_classe,
-      norme: inputs.norme,
-      travees,
-    }
-  }
-  return inputs
+type NavGroup = {
+  title: string
+  items: NavItem[]
 }
 
-export default function Page() {
-  const [activePage, setActivePage] = useState("poutre-simple")
-  const [inputs, setInputs] = useState<any>(getDefaultInputs("poutre-simple"))
-  const [results, setResults] = useState<any>(null)
-  const [loading, setLoading] = useState(false)
-  const [aiComment, setAiComment] = useState("")
-  const [aiLoading, setAiLoading] = useState(false)
-  const [error, setError] = useState("")
-  const schemaRef = useRef<HTMLDivElement>(null)
-  const { data: session } = useSession()
-  const [saveMsg, setSaveMsg] = useState("")
-  const [projet, setProjet] = useState("Projet test")
-  const [ingenieur, setIngenieur] = useState("Ing. Dupont")
-  const pageInfo = pageTitles[activePage] || { title: activePage, sub: "" }
-  const hasEndpoint = !!API_ENDPOINTS[activePage]
+const groups: NavGroup[] = [
+  {
+    title: "Fondations",
+    items: [
+      { label: "Semelle filante",  icon: StretchHorizontal, id: "semelle-filante" },
+      { label: "Semelle isolée",   icon: Box,               id: "semelle-isolee",   badge: "NEW" },
+      { label: "Radier général",   icon: Layers,            id: "radier",           badge: "NEW" },
+      { label: "Mur soutènement",  icon: Building2,         id: "mur-soutenement",  badge: "NEW" },
+    ],
+  },
+  {
+    title: "Structure verticale",
+    items: [
+      { label: "Poteau BA",  icon: Columns3,  id: "poteau" },
+      { label: "Voile BA",   icon: PanelTop,  id: "voile",    badge: "NEW" },
+      { label: "Acrotère",   icon: Squircle,  id: "acrotere", badge: "NEW" },
+    ],
+  },
+  {
+    title: "Poutres",
+    items: [
+      { label: "Poutre simple",   icon: GalleryVerticalEnd, id: "poutre-simple" },
+      { label: "Poutre continue", icon: Grip,               id: "poutre-continue", badge: "NEW" },
+    ],
+  },
+  {
+    title: "Dalles & Planchers",
+    items: [
+      { label: "Dalle pleine", icon: Frame,      id: "dalle-pleine",  badge: "NEW" },
+      { label: "Escalier",     icon: Footprints, id: "escalier",      badge: "NEW" },
+      { label: "Linteau",      icon: Component,  id: "linteau",       badge: "NEW" },
+    ],
+  },
+  {
+    title: "IA & Outils",
+    items: [
+      { label: "Assistant IA",  icon: Sparkles,   id: "assistant-ia",  badge: "IA" },
+      { label: "Lecture plans", icon: FileSearch, id: "lecture-plans", badge: "IA" },
+      { label: "Historique",    icon: Clock,      id: "historique" },
+    ],
+  },
+]
 
-  const handleNavigate = (id: string) => {
-    setActivePage(id)
-    setInputs(getDefaultInputs(id))
-    setResults(null); setAiComment(""); setError("")
-  }
+const pageTitles: Record<string, { title: string; sub: string }> = {
+  "poutre-simple":   { title: "Poutre rectangulaire — Flexion simple",       sub: "Flexion simple · ELU + ELS" },
+  "poutre-continue": { title: "Poutre continue — Méthode de Caquot",         sub: "2 à 5 travées · ELU + ELS" },
+  "poteau":          { title: "Poteau rectangulaire — Compression composée",  sub: "Flambement · EC2 / BAEL" },
+  "voile":           { title: "Voile BA — Compression + Flexion composée",    sub: "Élancement · EC2 / BAEL" },
+  "acrotere":        { title: "Acrotère — Flexion composée",                  sub: "Vent + Séisme EC8" },
+  "semelle-filante": { title: "Semelle filante — Mur / Voile porteur",        sub: "ELS sol · Flexion · EC2" },
+  "semelle-isolee":  { title: "Semelle isolée — Poteau BA",                   sub: "Sol · Flexion · Poinçonnement" },
+  "radier":          { title: "Radier général — Dalle pleine",                sub: "Winkler · EC2 / BAEL" },
+  "mur-soutenement": { title: "Mur de soutènement BA",                        sub: "Poussée Coulomb · Stabilité · Ferraillage" },
+  "dalle-pleine":    { title: "Dalle pleine bidirectionnelle",                sub: "Marcus · ELU + ELS · EC2" },
+  "escalier":        { title: "Escalier BA — Paillasse inclinée",             sub: "Flexion simple · EC2 / BAEL" },
+  "linteau":         { title: "Linteau BA — Flexion simple",                  sub: "ELU + Cisaillement · EC2" },
+  "assistant-ia":    { title: "Assistant IA — Ingénieur Structural",          sub: "Claude · EC2 · BAEL · EC8" },
+  "lecture-plans":   { title: "Lecture et Analyse de Plans",                  sub: "Vision IA · Extraction automatique" },
+  "historique":      { title: "Historique des calculs",                       sub: "Vos calculs sauvegardés" },
+}
 
-  const handleCalc = async () => {
-    if (!hasEndpoint) return
-    setLoading(true); setError("")
-    try {
-      const body = buildBody(inputs, activePage)
-      const res = await fetch(`${API}${API_ENDPOINTS[activePage]}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      })
-      if (!res.ok) {
-        const err = await res.json()
-        throw new Error(err.detail || "Erreur serveur")
-      }
-      setResults(await res.json())
-    } catch (e: any) { setError(`Erreur : ${e.message}`) }
-    setLoading(false)
-  }
+export let activePageId = "poutre-simple"
 
-  const handleAI = async () => {
-    if (!results) return
-    setAiLoading(true)
-    try {
-      const res = await fetch(`${API}/ia/analyser`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ element: pageInfo.title, donnees: inputs, resultats: results }),
-      })
-      setAiComment((await res.json()).commentaire)
-    } catch { setAiComment("Erreur IA — vérifiez votre clé API.") }
-    setAiLoading(false)
-  }
-
-  const handleSave = async () => {
-    if (!results) return
-    try {
-      const res = await fetch("/api/calculs", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: activePage,
-          title: pageInfo.title + " - " + new Date().toLocaleDateString("fr-FR"),
-          inputs, results,
-        }),
-      })
-      if (res.ok) { setSaveMsg("Sauvegardé ✓"); setTimeout(() => setSaveMsg(""), 2000) }
-    } catch { setSaveMsg("Erreur") }
-  }
-
+function SidebarContent({
+  active,
+  navigate,
+  projet,
+  onProjetChange,
+  ingenieur,
+  onIngenieurChange,
+}: {
+  active: string
+  navigate: (id: string) => void
+  projet?: string
+  onProjetChange?: (v: string) => void
+  ingenieur?: string
+  onIngenieurChange?: (v: string) => void
+}) {
   return (
-    <div className="flex min-h-screen bg-background text-foreground">
-      <Sidebar
-        onNavigate={handleNavigate}
-        projet={projet}
-        onProjetChange={setProjet}
-        ingenieur={ingenieur}
-        onIngenieurChange={setIngenieur}
-      />
-
-      {/* Main area — on mobile, add top padding for the fixed navbar */}
-      <div className="flex min-w-0 flex-1 flex-col pt-[52px] lg:pt-0">
-
-        {/* Header */}
-        <header className="flex flex-wrap items-start justify-between gap-3 border-b border-border bg-card px-4 py-3 sm:px-6 sm:py-4">
-          <div className="min-w-0">
-            <h1 className="text-base sm:text-xl font-semibold tracking-tight leading-snug truncate">
-              {pageInfo.title}
-            </h1>
-            <p className="text-xs text-muted-foreground mt-0.5 truncate">
-              {pageInfo.sub} · {inputs.norme||"EC2"} · {inputs.beton||"C25/30"} · {inputs.acier||"B500B"}
-            </p>
-          </div>
-
-          {/* Action buttons — wrap on small screens */}
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => { setResults(null); setAiComment(""); setError("") }}
-              className="text-xs sm:text-sm"
-            >
-              <RotateCcw className="size-3.5 sm:size-4" />
-              <span className="hidden sm:inline ml-1">Réinitialiser</span>
-            </Button>
-
-            {results && saveMsg && (
-              <span className="text-sm text-emerald-600 font-medium">{saveMsg}</span>
-            )}
-            {results && (
-              <Button variant="outline" size="sm" onClick={handleSave} className="text-xs sm:text-sm">
-                💾 <span className="hidden sm:inline ml-1">Sauvegarder</span>
-              </Button>
-            )}
-            {results && (
-              <PdfExportButton
-                projet={projet} ingenieur={ingenieur} norme={inputs.norme || "EC2"}
-                activePage={activePage} inputs={inputs} results={results} schemaRef={schemaRef}
-              />
-            )}
-          </div>
-        </header>
-
-        {/* Main content */}
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6">
-          {activePage === "historique" ? (
-            <HistoryPage onRestore={(type, inp, res) => {
-              handleNavigate(type)
-              setTimeout(() => { setInputs(inp); setResults(res) }, 100)
-            }} />
-          ) : activePage === "assistant-ia" ? (
-            <AssistantIA norme={inputs.norme} beton={inputs.beton} acier={inputs.acier} />
-          ) : activePage === "lecture-plans" ? (
-            <LecturePlans norme={inputs.norme} beton={inputs.beton} acier={inputs.acier} />
-          ) : (
-            <>
-              {results && (
-                <MetricCards results={results} norme={inputs.norme||"EC2"} activePage={activePage} />
-              )}
-
-              {/* Schémas structuraux */}
-              {results && activePage === "poutre-simple" && (
-                <div ref={schemaRef} className="mt-4 rounded-lg border border-border bg-card p-3 sm:p-4 overflow-x-auto">
-                  <BeamSchema b={inputs.b} h={inputs.h} L={inputs.L}
-                    As={results.As_retenu} choix={results.choix_armatures}
-                    d={results.d} MEd={results.MEd} VEd={results.VEd} />
-                </div>
-              )}
-              {results && activePage === "poteau" && (
-                <div ref={schemaRef} className="mt-4 rounded-lg border border-border bg-card p-3 sm:p-4 overflow-x-auto">
-                  <PoteauSchema b={inputs.b} h={inputs.h} longueur={inputs.longueur}
-                    As={results.As_retenu} choix={results.choix_armatures}
-                    d={results.d} NEd={results.NEd} lambda_={results.lambda_} />
-                </div>
-              )}
-              {results && activePage === "semelle-isolee" && (
-                <div ref={schemaRef} className="mt-4 rounded-lg border border-border bg-card p-3 sm:p-4 overflow-x-auto">
-                  <SemelleIsoleeSchema b_p={inputs.b_p} h_p={inputs.h_p} h_sem={inputs.h_sem}
-                    Ax={results.Ax} Ay={results.Ay}
-                    sigma_max={results.sigma_max} sigma_ok={results.sigma_ok} />
-                </div>
-              )}
-              {results && activePage === "acrotere" && (
-                <div ref={schemaRef} className="mt-4 rounded-lg border border-border bg-card p-3 sm:p-4 overflow-x-auto">
-                  <AcrotereSchema h={inputs.h} e={inputs.e}
-                    MEd={results.MEd} NEd={results.NEd} choix={results.choix} />
-                </div>
-              )}
-              {results && activePage === "escalier" && (
-                <div ref={schemaRef} className="mt-4 rounded-lg border border-border bg-card p-3 sm:p-4 overflow-x-auto">
-                  <EscalierSchema L_h={inputs.L_h} hauteur={inputs.hauteur}
-                    g_giron={inputs.g_giron} h_contre={inputs.h_contre} ep={inputs.ep}
-                    MEd={results.MEd} As_princ_retenu={results.As_princ_retenu}
-                    choix_princ={results.choix_princ} alpha_deg={results.alpha_deg} />
-                </div>
-              )}
-              {results && activePage === "poutre-continue" && results.travees_res && (
-                <div className="mt-4 rounded-lg border border-border bg-card p-3 sm:p-4 overflow-x-auto">
-                  <MomentDiagram travees={results.travees_res} />
-                </div>
-              )}
-
-              {/* Erreur */}
-              {error && (
-                <div className="mb-4 mt-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                  {error}
-                </div>
-              )}
-
-              {/* Formulaire + Résultats */}
-              <div className={
-                activePage === "poutre-continue"
-                  ? "mt-6 flex flex-col gap-6"
-                  : "mt-6 grid grid-cols-1 gap-6 xl:grid-cols-2"
-              }>
-                <InputForm inputs={inputs} onChange={setInputs} activePage={activePage} />
-                {activePage === "poutre-continue"
-                  ? <PoutreContinueResults results={results} />
-                  : <ResultsPanel results={results} activePage={activePage} />
-                }
-              </div>
-
-              {/* Boutons d'action */}
-              {hasEndpoint ? (
-                <div className="mt-6 flex flex-wrap items-center justify-end gap-3">
-                  <Button
-                    onClick={handleCalc}
-                    disabled={loading}
-                    className="bg-blue-600 hover:bg-blue-700 text-white w-full sm:w-auto"
-                    size="lg"
-                  >
-                    <Calculator className="size-4" />
-                    {loading ? "Calcul en cours..." : "Calculer"}
-                  </Button>
-                  <Button
-                    onClick={handleAI}
-                    disabled={aiLoading || !results}
-                    className="border border-purple-500 text-purple-600 bg-transparent hover:bg-purple-50 w-full sm:w-auto"
-                    size="lg"
-                  >
-                    <Sparkles className="size-4" />
-                    {aiLoading ? "Analyse..." : "Analyser avec l'IA"}
-                  </Button>
-                </div>
-              ) : (
-                <div className="mt-10 flex justify-center">
-                  <div className="text-center text-muted-foreground">
-                    <span className="text-4xl">🚧</span>
-                    <p className="mt-3 text-sm">Module en cours d&apos;intégration</p>
-                  </div>
-                </div>
-              )}
-
-              {/* Commentaire IA */}
-              {aiComment && (
-                <div className="mt-6 rounded-lg border border-purple-200 bg-purple-50 p-4 sm:p-5">
-                  <h3 className="mb-2 text-sm font-semibold text-purple-700">🤖 Analyse IA</h3>
-                  <p className="text-sm text-purple-900 whitespace-pre-wrap leading-relaxed">{aiComment}</p>
-                </div>
-              )}
-            </>
-          )}
-        </main>
+    <>
+      {/* Logo */}
+      <div className="flex items-center gap-3 border-b border-border px-5 py-4">
+        <div className="flex size-9 items-center justify-center rounded-md bg-primary text-primary-foreground">
+          <Box className="size-5" aria-hidden="true" />
+        </div>
+        <div className="flex flex-col">
+          <span className="text-sm font-semibold leading-tight text-sidebar-foreground">StructAI Pro</span>
+          <span className="font-mono text-[11px] leading-tight text-muted-foreground">EC2 · BAEL · EC8</span>
+        </div>
       </div>
-    </div>
+
+      {/* Nav */}
+      <nav className="flex-1 overflow-y-auto px-3 py-4" aria-label="Navigation principale">
+        {groups.map((group) => (
+          <div key={group.title} className="mb-5 last:mb-0">
+            <h3 className="px-2 pb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              {group.title}
+            </h3>
+            <ul className="flex flex-col gap-0.5">
+              {group.items.map((item) => (
+                <li key={item.id}>
+                  <button
+                    onClick={() => navigate(item.id)}
+                    className={cn(
+                      "flex w-full items-center gap-2.5 rounded-md px-2 py-2 text-sm font-medium transition-colors text-left",
+                      active === item.id
+                        ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                        : "text-sidebar-foreground/80 hover:bg-muted hover:text-sidebar-foreground",
+                    )}
+                  >
+                    <item.icon className="size-4 shrink-0" aria-hidden="true" />
+                    <span className="flex-1 truncate">{item.label}</span>
+                    {item.badge === "NEW" && (
+                      <span className="rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700">NEW</span>
+                    )}
+                    {item.badge === "IA" && (
+                      <span className="rounded-full bg-purple-100 px-1.5 py-0.5 text-[10px] font-semibold text-purple-700">IA</span>
+                    )}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </nav>
+
+      {/* Projet + user + déconnexion */}
+      <div className="border-t border-border px-4 py-3 flex flex-col gap-2">
+        <div>
+          <p className="text-[10px] text-muted-foreground mb-1">Projet actif</p>
+          <input
+            value={projet ?? ""}
+            onChange={e => onProjetChange?.(e.target.value)}
+            className="w-full rounded border border-border bg-background px-2 py-1 text-xs text-foreground outline-none focus:border-primary"
+            placeholder="Nom du projet"
+          />
+        </div>
+        <div>
+          <p className="text-[10px] text-muted-foreground mb-1">Ingénieur</p>
+          <input
+            value={ingenieur ?? ""}
+            onChange={e => onIngenieurChange?.(e.target.value)}
+            className="w-full rounded border border-border bg-background px-2 py-1 text-xs text-foreground outline-none focus:border-primary"
+            placeholder="Nom ingénieur"
+          />
+        </div>
+        <div className="flex items-center gap-3 mt-1">
+          <div className="flex size-8 items-center justify-center rounded-full bg-secondary text-xs font-semibold text-secondary-foreground">
+            ME
+          </div>
+          <div className="flex flex-col leading-tight flex-1">
+            <span className="text-xs font-medium text-sidebar-foreground">M. Eng.</span>
+            <span className="text-[11px] text-muted-foreground">Pro · v1.0</span>
+          </div>
+          <button
+            onClick={() => signOut({ callbackUrl: "/" })}
+            title="Se déconnecter"
+            className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-red-50 hover:text-red-600"
+          >
+            <LogOut className="size-4" />
+          </button>
+        </div>
+      </div>
+    </>
   )
 }
+
+export function Sidebar({ onNavigate, projet, onProjetChange, ingenieur, onIngenieurChange }: {
+  onNavigate?: (id: string) => void
+  projet?: string
+  onProjetChange?: (v: string) => void
+  ingenieur?: string
+  onIngenieurChange?: (v: string) => void
+}) {
+  const [active, setActive] = useState("poutre-simple")
+  const [mobileOpen, setMobileOpen] = useState(false)
+
+  const navigate = (id: string) => {
+    setActive(id)
+    activePageId = id
+    onNavigate?.(id)
+    setMobileOpen(false) // ferme le menu mobile après navigation
+  }
+
+  const sharedProps = { active, navigate, projet, onProjetChange, ingenieur, onIngenieurChange }
+
+  return (
+    <>
+      {/* ── DESKTOP sidebar (≥ lg) ── */}
+      <aside className="hidden lg:flex w-60 shrink-0 flex-col border-r border-border bg-sidebar">
+        <SidebarContent {...sharedProps} />
+      </aside>
+
+      {/* ── MOBILE top bar (< lg) ── */}
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-between border-b border-border bg-sidebar px-4 py-3">
+        <div className="flex items-center gap-2.5">
+          <div className="flex size-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
+            <Box className="size-4" aria-hidden="true" />
+          </div>
+          <span className="text-sm font-semibold text-sidebar-foreground">StructAI Pro</span>
+        </div>
+        <button
+          onClick={() => setMobileOpen(true)}
+          aria-label="Ouvrir le menu"
+          className="flex size-9 items-center justify-center rounded-md text-muted-foreground hover:bg-muted transition-colors"
+        >
+          <Menu className="size-5" />
+        </button>
+      </div>
+
+      {/* ── MOBILE drawer overlay ── */}
+      {mobileOpen && (
+        <div className="lg:hidden fixed inset-0 z-50 flex">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            onClick={() => setMobileOpen(false)}
+          />
+          {/* Drawer panel */}
+          <aside className="relative flex w-72 max-w-[85vw] flex-col border-r border-border bg-sidebar shadow-xl">
+            {/* Close button */}
+            <button
+              onClick={() => setMobileOpen(false)}
+              aria-label="Fermer le menu"
+              className="absolute top-3 right-3 flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted transition-colors z-10"
+            >
+              <X className="size-4" />
+            </button>
+            <SidebarContent {...sharedProps} />
+          </aside>
+        </div>
+      )}
+    </>
+  )
+}
+
+export { pageTitles }
