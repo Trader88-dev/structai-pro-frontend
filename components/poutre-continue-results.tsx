@@ -18,15 +18,21 @@ type Travee = {
 
 type PoutreContinueSchemaProps = {
   travees: Travee[]
-  b: number   // mm
-  h: number   // mm
-  d?: number  // mm
+  b: number
+  h: number
+  d?: number
 }
 
 export function PoutreContinueSchema({ travees, b, h, d }: PoutreContinueSchemaProps) {
   const mountRef  = useRef<HTMLDivElement>(null)
   const frameRef  = useRef<number>(0)
   const rendRef   = useRef<any>(null)
+
+  if (!travees || travees.length === 0) return (
+    <div className="rounded-lg border border-border bg-card flex items-center justify-center min-h-[300px]">
+      <p className="text-sm text-muted-foreground">Renseignez les données et cliquez sur Calculer</p>
+    </div>
+  )
 
   const totalL = travees.reduce((s, t) => s + t.L, 0)
   const maxM   = Math.max(...travees.flatMap(t => [Math.abs(t.M_trav), Math.abs(t.M_app_g), Math.abs(t.M_app_d)]))
@@ -35,8 +41,6 @@ export function PoutreContinueSchema({ travees, b, h, d }: PoutreContinueSchemaP
   useEffect(() => {
     if (!mountRef.current) return
     const container = mountRef.current
-
-    // Charger Three.js si pas déjà là
     if ((window as any).THREE) { init(container); return }
     const s = document.createElement("script")
     s.src = "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"
@@ -80,11 +84,8 @@ export function PoutreContinueSchema({ travees, b, h, d }: PoutreContinueSchemaP
     const bM  = b / 1000
     const hM  = h / 1000
     const cov = 0.038
-
-    // Centrer la poutre sur x=0
     const offsetX = -totalL / 2
 
-    // ── BÉTON par travée ──
     let cx = offsetX
     travees.forEach(t => {
       const geo = new THREE.BoxGeometry(t.L, hM, bM)
@@ -96,22 +97,20 @@ export function PoutreContinueSchema({ travees, b, h, d }: PoutreContinueSchemaP
       cx += t.L
     })
 
-    // ── APPUIS ──
     function mkSupport(x: number, isEnd: boolean) {
-      // Colonne
       const colH = isEnd ? 0.3 : 0.6
-      const colGeo = new THREE.CylinderGeometry(isEnd ? 0.07 : 0.09, isEnd ? 0.07 : 0.09, colH, 12)
-      const col = new THREE.Mesh(colGeo, new THREE.MeshPhongMaterial({ color: isEnd ? 0x888780 : 0x5f5e5a }))
+      const col = new THREE.Mesh(
+        new THREE.CylinderGeometry(isEnd ? 0.07 : 0.09, isEnd ? 0.07 : 0.09, colH, 12),
+        new THREE.MeshPhongMaterial({ color: isEnd ? 0x888780 : 0x5f5e5a })
+      )
       col.position.set(x, -hM / 2 - colH / 2, 0)
       scene.add(col)
-      // Semelle
       const sem = new THREE.Mesh(
         new THREE.BoxGeometry(isEnd ? 0.25 : 0.35, 0.06, bM + 0.1),
         new THREE.MeshPhongMaterial({ color: 0x5f5e5a })
       )
       sem.position.set(x, -hM / 2 - colH - 0.03, 0)
       scene.add(sem)
-      // Triangle appui (extrémités)
       if (isEnd) {
         const tri = new THREE.Mesh(new THREE.ConeGeometry(0, 0.12, 4), new THREE.MeshPhongMaterial({ color: 0x888780 }))
         tri.position.set(x, -hM / 2 - 0.06, 0)
@@ -122,12 +121,8 @@ export function PoutreContinueSchema({ travees, b, h, d }: PoutreContinueSchemaP
 
     let sx = offsetX
     mkSupport(sx, true)
-    travees.forEach((t, i) => {
-      sx += t.L
-      mkSupport(sx, i === travees.length - 1)
-    })
+    travees.forEach((t, i) => { sx += t.L; mkSupport(sx, i === travees.length - 1) })
 
-    // ── HELPER BARRE ──
     function mkBar(x: number, y: number, z: number, len: number, r: number, col: number, axis = "x") {
       const g = new THREE.CylinderGeometry(r, r, len, 16)
       const m = new THREE.MeshPhongMaterial({ color: col, shininess: 100 })
@@ -139,65 +134,32 @@ export function PoutreContinueSchema({ travees, b, h, d }: PoutreContinueSchemaP
       scene.add(mesh)
     }
 
-    // ── FERRAILLAGE PAR TRAVÉE ──
     cx = offsetX
-    travees.forEach((t, i) => {
+    travees.forEach((t) => {
       const midX = cx + t.L / 2
       const barsT = parseBars(t.choix_trav)
       const barsG = parseBars(t.choix_chap_g)
       const barsD = parseBars(t.choix_chap_d)
-
       const rT = barsT.diam / 2 / 1000
       const rG = barsG.diam / 2 / 1000
       const rD = barsD.diam / 2 / 1000
-
       const yBot = -hM / 2 + cov + rT
       const yTop =  hM / 2 - cov - Math.max(rG, rD)
-
       const nbT = Math.min(barsT.nb, 6)
       const spT = (bM - 2 * cov) / Math.max(nbT - 1, 1)
-
-      // Barres travée (inférieures)
-      for (let j = 0; j < nbT; j++) {
-        const z = -bM / 2 + cov + j * spT
-        mkBar(midX, yBot, z, t.L - 0.04, rT, 0xe24b4a)
-      }
-
-      // Zone tendue travée
-      const zt = new THREE.Mesh(
-        new THREE.BoxGeometry(t.L - 0.06, cov * 2 + 0.04, bM - 0.02),
-        new THREE.MeshPhongMaterial({ color: 0xe24b4a, transparent: true, opacity: 0.15 })
-      )
-      zt.position.set(midX, yBot + 0.01, 0)
-      scene.add(zt)
-
-      // Chapeaux gauche (sur appui gauche = cx)
+      for (let j = 0; j < nbT; j++) mkBar(midX, yBot, -bM / 2 + cov + j * spT, t.L - 0.04, rT, 0xe24b4a)
+      const zt = new THREE.Mesh(new THREE.BoxGeometry(t.L - 0.06, cov * 2 + 0.04, bM - 0.02), new THREE.MeshPhongMaterial({ color: 0xe24b4a, transparent: true, opacity: 0.15 }))
+      zt.position.set(midX, yBot + 0.01, 0); scene.add(zt)
+      const chapLenG = Math.min(t.L * 0.35, 1.5)
       const nbG = Math.min(barsG.nb, 4)
       const spG = (bM - 2 * cov) / Math.max(nbG - 1, 1)
-      const chapLenG = Math.min(t.L * 0.35, 1.5)
-      for (let j = 0; j < nbG; j++) {
-        const z = -bM / 2 + cov + j * spG
-        mkBar(cx + chapLenG / 2, yTop, z, chapLenG, rG, 0x185fa5)
-      }
-
-      // Chapeaux droit (sur appui droit = cx+t.L)
+      for (let j = 0; j < nbG; j++) mkBar(cx + chapLenG / 2, yTop, -bM / 2 + cov + j * spG, chapLenG, rG, 0x185fa5)
+      const chapLenD = Math.min(t.L * 0.35, 1.5)
       const nbD = Math.min(barsD.nb, 4)
       const spD = (bM - 2 * cov) / Math.max(nbD - 1, 1)
-      const chapLenD = Math.min(t.L * 0.35, 1.5)
-      for (let j = 0; j < nbD; j++) {
-        const z = -bM / 2 + cov + j * spD
-        mkBar(cx + t.L - chapLenD / 2, yTop, z, chapLenD, rD, 0x185fa5)
-      }
-
-      // Zone comprimée travée (haut)
-      const zc = new THREE.Mesh(
-        new THREE.BoxGeometry(t.L - 0.06, 0.05, bM - 0.02),
-        new THREE.MeshPhongMaterial({ color: 0x185fa5, transparent: true, opacity: 0.12 })
-      )
-      zc.position.set(midX, hM / 2 - 0.035, 0)
-      scene.add(zc)
-
-      // Cadres HA8
+      for (let j = 0; j < nbD; j++) mkBar(cx + t.L - chapLenD / 2, yTop, -bM / 2 + cov + j * spD, chapLenD, rD, 0x185fa5)
+      const zc = new THREE.Mesh(new THREE.BoxGeometry(t.L - 0.06, 0.05, bM - 0.02), new THREE.MeshPhongMaterial({ color: 0x185fa5, transparent: true, opacity: 0.12 }))
+      zc.position.set(midX, hM / 2 - 0.035, 0); scene.add(zc)
       const sw = bM - 2 * cov, sh = hM - 2 * cov
       for (let x2 = cx + 0.1; x2 <= cx + t.L - 0.08; x2 += 0.15) {
         mkBar(x2, 0, -sw / 2, sh + 0.006, 0.004, 0x185fa5, "y")
@@ -205,17 +167,13 @@ export function PoutreContinueSchema({ travees, b, h, d }: PoutreContinueSchemaP
         mkBar(x2,  sh / 2, 0, sw + 0.006, 0.004, 0x185fa5, "z")
         mkBar(x2, -sh / 2, 0, sw + 0.006, 0.004, 0x185fa5, "z")
       }
-
       cx += t.L
     })
 
-    // ── CHARGES ──
     cx = offsetX
     travees.forEach(t => {
-      const midX = cx + t.L / 2
       const aM2 = new THREE.MeshPhongMaterial({ color: 0xdc2626 })
-      const linePts = [new THREE.Vector3(cx, hM / 2 + 0.4, 0), new THREE.Vector3(cx + t.L, hM / 2 + 0.4, 0)]
-      scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(linePts), new THREE.LineBasicMaterial({ color: 0xdc2626 })))
+      scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(cx, hM / 2 + 0.4, 0), new THREE.Vector3(cx + t.L, hM / 2 + 0.4, 0)]), new THREE.LineBasicMaterial({ color: 0xdc2626 })))
       for (let x2 = cx + 0.3; x2 <= cx + t.L - 0.2; x2 += 0.45) {
         const s = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.01, 0.25, 8), aM2)
         s.position.set(x2, hM / 2 + 0.26, 0); scene.add(s)
@@ -225,82 +183,49 @@ export function PoutreContinueSchema({ travees, b, h, d }: PoutreContinueSchemaP
       cx += t.L
     })
 
-    // ── DIAGRAMME M (multi-travées) ──
     const mScale = 0.65 / maxM
     const mPts: any[] = []
     cx = offsetX
     travees.forEach(t => {
-      const x1 = cx, x2 = cx + t.L
-      const Mg = t.M_app_g, Md = t.M_app_d, Mt = t.M_trav
       for (let i = 0; i <= 40; i++) {
         const s = i / 40
-        const x = x1 + s * t.L
-        // Interpolation parabolique avec moments appuis
-        const Mlin = Mg + (Md - Mg) * s
-        const Mpar = 4 * Mt * s * (1 - s)
-        const M = Mlin + Mpar
-        mPts.push(new THREE.Vector3(x, -hM / 2 - 0.06 - M * mScale, bM / 2 + 0.08))
+        const M = (t.M_app_g + (t.M_app_d - t.M_app_g) * s) + 4 * t.M_trav * s * (1 - s)
+        mPts.push(new THREE.Vector3(cx + s * t.L, -hM / 2 - 0.06 - M * mScale, bM / 2 + 0.08))
       }
       cx += t.L
     })
     scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(mPts), new THREE.LineBasicMaterial({ color: 0x185fa5, linewidth: 2 })))
-
-    // Remplissage M
     const mSh = new THREE.Shape()
     mSh.moveTo(mPts[0].x, -hM / 2 - 0.06)
     mPts.forEach((p: any) => mSh.lineTo(p.x, p.y))
     mSh.lineTo(mPts[mPts.length - 1].x, -hM / 2 - 0.06)
     mSh.closePath()
-    const mFill = new THREE.Mesh(
-      new THREE.ShapeGeometry(mSh),
-      new THREE.MeshBasicMaterial({ color: 0x185fa5, transparent: true, opacity: 0.14, side: THREE.DoubleSide })
-    )
+    const mFill = new THREE.Mesh(new THREE.ShapeGeometry(mSh), new THREE.MeshBasicMaterial({ color: 0x185fa5, transparent: true, opacity: 0.14, side: THREE.DoubleSide }))
     mFill.position.z = bM / 2 + 0.08
     scene.add(mFill)
 
-    // ── DIAGRAMME V (multi-travées) ──
     const vScale = 0.35 / maxV
     cx = offsetX
     travees.forEach(t => {
       const pts = [
         new THREE.Vector3(cx, -hM / 2 - 0.06 - t.V_g * vScale, -(bM / 2 + 0.08)),
-        new THREE.Vector3(cx + t.L, -hM / 2 - 0.06 - (-t.V_d) * vScale, -(bM / 2 + 0.08)),
+        new THREE.Vector3(cx + t.L, -hM / 2 - 0.06 + t.V_d * vScale, -(bM / 2 + 0.08)),
       ]
       scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: 0x22c55e, linewidth: 2 })))
-
-      // Remplissage V
       const vSh = new THREE.Shape()
-      vSh.moveTo(cx, -hM / 2 - 0.06)
-      vSh.lineTo(cx, pts[0].y)
-      vSh.lineTo(cx + t.L, pts[1].y)
-      vSh.lineTo(cx + t.L, -hM / 2 - 0.06)
-      vSh.closePath()
-      const vFill = new THREE.Mesh(
-        new THREE.ShapeGeometry(vSh),
-        new THREE.MeshBasicMaterial({ color: 0x22c55e, transparent: true, opacity: 0.13, side: THREE.DoubleSide })
-      )
-      vFill.position.z = -(bM / 2 + 0.08)
-      scene.add(vFill)
+      vSh.moveTo(cx, -hM / 2 - 0.06); vSh.lineTo(cx, pts[0].y)
+      vSh.lineTo(cx + t.L, pts[1].y); vSh.lineTo(cx + t.L, -hM / 2 - 0.06); vSh.closePath()
+      const vFill = new THREE.Mesh(new THREE.ShapeGeometry(vSh), new THREE.MeshBasicMaterial({ color: 0x22c55e, transparent: true, opacity: 0.13, side: THREE.DoubleSide }))
+      vFill.position.z = -(bM / 2 + 0.08); scene.add(vFill)
       cx += t.L
     })
 
-    // ── SOL ──
-    const fl = new THREE.Mesh(
-      new THREE.PlaneGeometry(totalL + 4, 6),
-      new THREE.MeshPhongMaterial({ color: 0xe8e6e0 })
-    )
-    fl.rotation.x = -Math.PI / 2
-    fl.position.y = -hM / 2 - 0.72
-    fl.receiveShadow = true
-    scene.add(fl)
+    const fl = new THREE.Mesh(new THREE.PlaneGeometry(totalL + 4, 6), new THREE.MeshPhongMaterial({ color: 0xe8e6e0 }))
+    fl.rotation.x = -Math.PI / 2; fl.position.y = -hM / 2 - 0.72; scene.add(fl)
     const grid = new THREE.GridHelper(totalL + 4, Math.round((totalL + 4) * 4), 0xd1cec7, 0xe2dfd8)
-    grid.position.y = -hM / 2 - 0.71
-    scene.add(grid)
+    grid.position.y = -hM / 2 - 0.71; scene.add(grid)
 
-    // ── ORBIT ──
-    let drag = false, ox = 0, oy = 0
-    let rotX = 0.28, rotY = 0.5, zoom = 1.0
-
+    let drag = false, ox = 0, oy = 0, rotX = 0.28, rotY = 0.5, zoom = 1.0
     canvas.addEventListener("mousedown", e => { drag = true; ox = e.clientX; oy = e.clientY })
     canvas.addEventListener("mousemove", e => {
       if (!drag) return
@@ -337,8 +262,6 @@ export function PoutreContinueSchema({ travees, b, h, d }: PoutreContinueSchemaP
 
   return (
     <div className="rounded-xl border border-border bg-card overflow-hidden">
-
-      {/* Métriques globales */}
       <div className="grid grid-cols-3 sm:grid-cols-6 gap-px bg-border">
         {travees.map((t, i) => (
           <div key={i} className="bg-card px-3 py-2">
@@ -348,12 +271,8 @@ export function PoutreContinueSchema({ travees, b, h, d }: PoutreContinueSchemaP
           </div>
         ))}
       </div>
-
-      {/* Vue 3D */}
       <div ref={mountRef} className="relative bg-slate-50" style={{ height: 460 }}>
         <canvas style={{ width: "100%", height: "100%", display: "block", cursor: "grab" }} />
-
-        {/* Légende overlay */}
         <div className="absolute top-3 right-3 bg-white/95 border border-border rounded-lg px-3 py-2 text-xs space-y-1.5 max-w-[190px]">
           <div className="font-medium text-foreground mb-1">Ferraillage</div>
           <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-red-500 flex-shrink-0"/><span>Barres travée (inf.)</span></div>
@@ -363,12 +282,8 @@ export function PoutreContinueSchema({ travees, b, h, d }: PoutreContinueSchemaP
             <div className="flex items-center gap-2"><span className="w-6 h-1 bg-blue-500 flex-shrink-0 rounded"/><span>Diag. M (front)</span></div>
             <div className="flex items-center gap-2"><span className="w-6 h-1 bg-green-500 flex-shrink-0 rounded"/><span>Diag. V (arrière)</span></div>
           </div>
-          <div className="border-t border-border pt-1 text-muted-foreground">
-            {b}×{h} mm · {totalL.toFixed(1)} m · EC2
-          </div>
+          <div className="border-t border-border pt-1 text-muted-foreground">{b}×{h} mm · {totalL.toFixed(1)} m · EC2</div>
         </div>
-
-        {/* Hint */}
         <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-white/80 border border-border rounded-full px-3 py-1 text-xs text-muted-foreground whitespace-nowrap">
           Glisser pour pivoter · Molette pour zoomer
         </div>
@@ -376,4 +291,5 @@ export function PoutreContinueSchema({ travees, b, h, d }: PoutreContinueSchemaP
     </div>
   )
 }
+
 export { PoutreContinueSchema as PoutreContinueResults }
