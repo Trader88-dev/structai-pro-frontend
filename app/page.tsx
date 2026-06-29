@@ -227,7 +227,12 @@ export default function Page() {
               <div className={activePage === "poutre-continue" ? "mt-6 flex flex-col gap-6" : "mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2"}>
                 <InputForm inputs={inputs} onChange={setInputs} activePage={activePage} />
                 {activePage === "poutre-continue"
-                  ? <PoutreContinueResults results={results} />
+                  ? <PoutreContinueResults
+  travees={results.travees_res}
+  b={inputs.b}
+  h={inputs.h}
+  d={results.d}
+/>
                   : <ResultsPanel results={results} activePage={activePage} />
                 }
               </div>
