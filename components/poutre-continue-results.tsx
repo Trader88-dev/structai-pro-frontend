@@ -123,7 +123,7 @@ export function PoutreContinueSchema({ travees, b, h, d }: PoutreContinueSchemaP
     mkSupport(sx, true)
     safeTravees.forEach((t, i) => {
       sx += t.L
-      mkSupport(sx, i === travees.length - 1)
+      mkSupport(sx, i === safeTravees.length - 1)
     })
 
     // ── HELPER BARRE ──
