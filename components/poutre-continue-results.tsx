@@ -376,3 +376,4 @@ export function PoutreContinueSchema({ travees, b, h, d }: PoutreContinueSchemaP
     </div>
   )
 }
+export { PoutreContinueSchema as PoutreContinueResults }
