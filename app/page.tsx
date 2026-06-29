@@ -245,12 +245,6 @@ export default function Page() {
                     choix_princ={results.choix_princ} alpha_deg={results.alpha_deg} />
                 </div>
               )}
-              {results && activePage === "poutre-continue" && results.travees_res && (
-                <div className="mt-4 rounded-lg border border-border bg-card p-3 sm:p-4 overflow-x-auto">
-                  <MomentDiagram travees={results.travees_res} />
-                </div>
-              )}
-
               {/* Erreur */}
               {error && (
                 <div className="mb-4 mt-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
