@@ -175,14 +175,16 @@ function SidebarContent({
             <span className="text-xs font-medium text-sidebar-foreground">M. Eng.</span>
             <span className="text-[11px] text-muted-foreground">Pro · v1.0</span>
           </div>
-          <button
-            onClick={() => signOut({ callbackUrl: "/" })}
-            title="Se déconnecter"
-            className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-red-50 hover:text-red-600"
-          >
-            <LogOut className="size-4" />
-          </button>
         </div>
+
+        {/* Bouton de déconnexion — texte visible, plus juste une icône */}
+        <button
+          onClick={() => signOut({ callbackUrl: "/" })}
+          className="mt-1 flex w-full items-center justify-center gap-2 rounded-md border border-border px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-600"
+        >
+          <LogOut className="size-3.5" />
+          Déconnexion
+        </button>
       </div>
     </>
   )
