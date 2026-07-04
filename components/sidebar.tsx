@@ -6,6 +6,7 @@ import {
   Layers, Box, Building2, Grip, PanelTop, Squircle, Frame,
   GalleryVerticalEnd, Columns3, StretchHorizontal, Footprints,
   Component, Sparkles, FileSearch, Clock, LogOut, Menu, X,
+  ArrowDownToLine,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -55,6 +56,12 @@ const groups: NavGroup[] = [
     ],
   },
   {
+    title: "Renforcements & Ouvertures",
+    items: [
+      { label: "Descente de charges", icon: ArrowDownToLine, id: "descente-charges", badge: "NEW" },
+    ],
+  },
+  {
     title: "IA & Outils",
     items: [
       { label: "Assistant IA",  icon: Sparkles,   id: "assistant-ia",  badge: "IA" },
@@ -77,6 +84,7 @@ const pageTitles: Record<string, { title: string; sub: string }> = {
   "dalle-pleine":    { title: "Dalle pleine bidirectionnelle",                sub: "Marcus · ELU + ELS · EC2" },
   "escalier":        { title: "Escalier BA — Paillasse inclinée",             sub: "Flexion simple · EC2 / BAEL" },
   "linteau":         { title: "Linteau BA — Flexion simple",                  sub: "ELU + Cisaillement · EC2" },
+  "descente-charges":{ title: "Descente de charges — Ouverture en mur porteur", sub: "Multi-niveaux · Profilé métallique · EC0/EC1/EC3" },
   "assistant-ia":    { title: "Assistant IA — Ingénieur Structural",          sub: "Claude · EC2 · BAEL · EC8" },
   "lecture-plans":   { title: "Lecture et Analyse de Plans",                  sub: "Vision IA · Extraction automatique" },
   "historique":      { title: "Historique des calculs",                       sub: "Vos calculs sauvegardés" },
