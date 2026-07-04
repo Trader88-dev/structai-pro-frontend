@@ -15,7 +15,7 @@ type FieldDef = {
   key: string
   label: string
   unit: string
-  type: "number" | "select"
+  type: "number" | "select" | "text"
   options?: string[]
   default: any
   step?: number
@@ -261,58 +261,10 @@ const PAGE_FORMS: Record<string, SectionDef[]> = {
     { title: "Profilé de renforcement", fields: [
       { key:"profil",      label:"Profilé",          unit:"",  type:"select", options:PROFILES_METAL, default:"HEA120" },
       { key:"acier_metal", label:"Acier",            unit:"",  type:"select", options:ACIERS_METAL,   default:"S275" },
-      { key:"L",           label:"Portée linteau",   unit:"m", type:"number", default:0.65, step:0.05, min:0.3 },
+      { key:"L",           label:"Portée linteau",   unit:"m", type:"number", default:1.0, step:0.05, min:0.3 },
       { key:"nb_profiles", label:"Profilés jumelés", unit:"",  type:"number", default:1, step:1, min:1 },
-      { key:"nb_niveaux",  label:"Nombre de niveaux",unit:"",  type:"number", default:6, step:1, min:1 },
+      { key:"nb_niveaux",  label:"Nombre de niveaux",unit:"",  type:"number", default:3, step:1, min:1 },
       { key:"fraction",    label:"Fraction reprise", unit:"%", type:"number", default:100, step:5, min:5 },
-    ]},
-    { title: "Niveau 1 (PH RDC)", fields: [
-      { key:"h1",    label:"Hauteur mur",      unit:"m",    type:"number", default:0.5, step:0.1 },
-      { key:"ep1",   label:"Épaisseur mur",    unit:"m",    type:"number", default:0.2, step:0.05 },
-      { key:"dens1", label:"Densité mur",      unit:"T/m³", type:"number", default:2.2, step:0.1 },
-      { key:"larg1", label:"Largeur plancher", unit:"m",    type:"number", default:3.0, step:0.25 },
-      { key:"g1",    label:"g plancher",       unit:"T/m²", type:"number", default:0.25, step:0.05 },
-      { key:"q1",    label:"q plancher",       unit:"T/m²", type:"number", default:0.3, step:0.05 },
-    ]},
-    { title: "Niveau 2 (PH 1er étage)", fields: [
-      { key:"h2",    label:"Hauteur mur",      unit:"m",    type:"number", default:2.5, step:0.1 },
-      { key:"ep2",   label:"Épaisseur mur",    unit:"m",    type:"number", default:0.2, step:0.05 },
-      { key:"dens2", label:"Densité mur",      unit:"T/m³", type:"number", default:2.2, step:0.1 },
-      { key:"larg2", label:"Largeur plancher", unit:"m",    type:"number", default:3.0, step:0.25 },
-      { key:"g2",    label:"g plancher",       unit:"T/m²", type:"number", default:0.25, step:0.05 },
-      { key:"q2",    label:"q plancher",       unit:"T/m²", type:"number", default:0.15, step:0.05 },
-    ]},
-    { title: "Niveau 3 (PH 2ème étage)", fields: [
-      { key:"h3",    label:"Hauteur mur",      unit:"m",    type:"number", default:2.5, step:0.1 },
-      { key:"ep3",   label:"Épaisseur mur",    unit:"m",    type:"number", default:0.2, step:0.05 },
-      { key:"dens3", label:"Densité mur",      unit:"T/m³", type:"number", default:2.2, step:0.1 },
-      { key:"larg3", label:"Largeur plancher", unit:"m",    type:"number", default:3.0, step:0.25 },
-      { key:"g3",    label:"g plancher",       unit:"T/m²", type:"number", default:0.25, step:0.05 },
-      { key:"q3",    label:"q plancher",       unit:"T/m²", type:"number", default:0.15, step:0.05 },
-    ]},
-    { title: "Niveau 4 (PH 3ème étage)", fields: [
-      { key:"h4",    label:"Hauteur mur",      unit:"m",    type:"number", default:2.5, step:0.1 },
-      { key:"ep4",   label:"Épaisseur mur",    unit:"m",    type:"number", default:0.2, step:0.05 },
-      { key:"dens4", label:"Densité mur",      unit:"T/m³", type:"number", default:2.2, step:0.1 },
-      { key:"larg4", label:"Largeur plancher", unit:"m",    type:"number", default:3.0, step:0.25 },
-      { key:"g4",    label:"g plancher",       unit:"T/m²", type:"number", default:0.25, step:0.05 },
-      { key:"q4",    label:"q plancher",       unit:"T/m²", type:"number", default:0.15, step:0.05 },
-    ]},
-    { title: "Niveau 5 (PH 4ème étage)", fields: [
-      { key:"h5",    label:"Hauteur mur",      unit:"m",    type:"number", default:2.5, step:0.1 },
-      { key:"ep5",   label:"Épaisseur mur",    unit:"m",    type:"number", default:0.2, step:0.05 },
-      { key:"dens5", label:"Densité mur",      unit:"T/m³", type:"number", default:2.2, step:0.1 },
-      { key:"larg5", label:"Largeur plancher", unit:"m",    type:"number", default:3.0, step:0.25 },
-      { key:"g5",    label:"g plancher",       unit:"T/m²", type:"number", default:0.25, step:0.05 },
-      { key:"q5",    label:"q plancher",       unit:"T/m²", type:"number", default:0.1, step:0.05 },
-    ]},
-    { title: "Niveau 6 (Comble)", fields: [
-      { key:"h6",    label:"Hauteur mur",      unit:"m",    type:"number", default:2.4, step:0.1 },
-      { key:"ep6",   label:"Épaisseur mur",    unit:"m",    type:"number", default:0.2, step:0.05 },
-      { key:"dens6", label:"Densité mur",      unit:"T/m³", type:"number", default:2.2, step:0.1 },
-      { key:"larg6", label:"Largeur plancher", unit:"m",    type:"number", default:3.0, step:0.25 },
-      { key:"g6",    label:"g plancher",       unit:"T/m²", type:"number", default:0.25, step:0.05 },
-      { key:"q6",    label:"q plancher",       unit:"T/m²", type:"number", default:0.1, step:0.05 },
     ]},
   ],
   "mur-soutenement": [
@@ -348,11 +300,38 @@ const DEFAULT_FORM: SectionDef[] = [
   ]},
 ]
 
+// ── Descente de charges : niveaux dynamiques ─────────────────────────────────
+export const DDC_MAX_NIVEAUX = 10
+function ddcNiveauSection(i: number): SectionDef {
+  return { title: `Niveau ${i}`, fields: [
+    { key:`nom${i}`,  label:"Désignation",      unit:"",     type:"text",   default:`Niveau ${i}` },
+    { key:`h${i}`,    label:"Hauteur mur",      unit:"m",    type:"number", default:2.5, step:0.1 },
+    { key:`ep${i}`,   label:"Épaisseur mur",    unit:"m",    type:"number", default:0.2, step:0.05 },
+    { key:`dens${i}`, label:"Densité mur",      unit:"T/m³", type:"number", default:2.2, step:0.1 },
+    { key:`larg${i}`, label:"Largeur plancher", unit:"m",    type:"number", default:3.0, step:0.25 },
+    { key:`g${i}`,    label:"g plancher",       unit:"T/m²", type:"number", default:0.25, step:0.05 },
+    { key:`q${i}`,    label:"q plancher",       unit:"T/m²", type:"number", default:0.15, step:0.05 },
+  ]}
+}
+function getSections(activePage: string, inputs: Record<string, any>): SectionDef[] {
+  const base = PAGE_FORMS[activePage] || DEFAULT_FORM
+  if (activePage !== "descente-charges") return base
+  const nb = Math.max(1, Math.min(DDC_MAX_NIVEAUX, Math.round(inputs.nb_niveaux || 3)))
+  const niveaux: SectionDef[] = []
+  for (let i = 1; i <= nb; i++) niveaux.push(ddcNiveauSection(i))
+  return [...base, ...niveaux]
+}
+
 // Valeurs par défaut pour chaque page
 export function getDefaultInputs(pageId: string): Record<string, any> {
   const form = PAGE_FORMS[pageId] || DEFAULT_FORM
   const defaults: Record<string, any> = {}
   form.forEach(section => section.fields.forEach(f => { defaults[f.key] = f.default }))
+  if (pageId === "descente-charges") {
+    for (let i = 1; i <= DDC_MAX_NIVEAUX; i++) {
+      ddcNiveauSection(i).fields.forEach(f => { defaults[f.key] = f.default })
+    }
+  }
   return defaults
 }
 
@@ -361,9 +340,9 @@ export function InputForm({ inputs, onChange, activePage }: {
   onChange: (v: Record<string, any>) => void
   activePage: string
 }) {
-  const sections = PAGE_FORMS[activePage] || DEFAULT_FORM
+  const sections = getSections(activePage, inputs)
 
-  const set = (key: string, val: string, type: "number" | "select") => {
+  const set = (key: string, val: string, type: "number" | "select" | "text") => {
     onChange({ ...inputs, [key]: type === "number" ? (parseFloat(val) || 0) : val })
   }
 
@@ -387,7 +366,14 @@ export function InputForm({ inputs, onChange, activePage }: {
               {section.fields.map(f => (
                 <div key={f.key} className="flex flex-col gap-1.5">
                   <label className="text-xs font-medium text-muted-foreground">{f.label}</label>
-                  {f.type === "select" ? (
+                  {f.type === "text" ? (
+                    <input
+                      type="text"
+                      value={inputs[f.key] ?? f.default}
+                      onChange={e => set(f.key, e.target.value, "text")}
+                      className="rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-ring"
+                    />
+                  ) : f.type === "select" ? (
                     <select
                       value={inputs[f.key] ?? f.default}
                       onChange={e => set(f.key, e.target.value, "select")}
