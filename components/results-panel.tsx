@@ -10,6 +10,13 @@ const statusConfig = {
 // Génère les lignes de résultats selon la page
 // Labels lisibles pour les clés de résultats
 const RESULT_LABELS: Record<string, { label: string; unit: string }> = {
+  G_total:            { label: "Charge permanente G",     unit: "T/ml" },
+  Q_total:            { label: "Charge exploitation Q",   unit: "T/ml" },
+  G_kN:               { label: "G",                       unit: "kN/ml" },
+  Q_kN:               { label: "Q",                       unit: "kN/ml" },
+  MRd:                { label: "Moment résistant MRd",    unit: "kN·m" },
+  taux_travail:       { label: "Taux de travail η",       unit: "%" },
+  taux_fleche:        { label: "Taux de travail flèche",  unit: "%" },
   d:                  { label: "Hauteur utile d",         unit: "mm" },
   enrobage:           { label: "Enrobage",                unit: "mm" },
   MEd:                { label: "Moment MEd",              unit: "kN·m" },
@@ -139,6 +146,7 @@ function getVerifications(results: any, page: string) {
   // Vérifications communes selon les champs booléens
   const boolFields: Record<string, { label: string; invertOk?: boolean }> = {
     sigma_ok:          { label: "Pression sol" },
+    flexion_ok:        { label: "Flexion profilé (η ≤ 100%)" },
     fleche_ok:         { label: "Flèche ELS" },
     fissuration_ok:    { label: "Fissuration ELS" },
     cisaillement_ok:   { label: "Cisaillement" },
