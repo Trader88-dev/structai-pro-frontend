@@ -31,6 +31,7 @@ const API_ENDPOINTS: Record<string, string> = {
   "semelle-isolee":  "/calcul/semelle-isolee",
   "linteau":         "/calcul/linteau",
   "mur-soutenement": "/calcul/mur-soutenement",
+  "descente-charges": "/calcul/descente-charges",
 }
 
 function buildBody(inputs: any, pageId: string): any {
@@ -49,6 +50,30 @@ function buildBody(inputs: any, pageId: string): any {
   if (pageId === "semelle-isolee") return { ...inputs, pct_G: (inputs.pct_G||70)/100 }
   if (pageId === "radier") return { ...inputs, pct_G: (inputs.pct_G||70)/100 }
   if (pageId === "voile") return { ...inputs, pct_G: (inputs.pct_G||70)/100 }
+  if (pageId === "descente-charges") {
+    const NOMS = ["PH RDC","PH 1ER ETAGE","PH 2EME ETAGE","PH 3EME ETAGE","PH 4EME ETAGE","COMBLE"]
+    const nb = Math.min(inputs.nb_niveaux || 6, 6)
+    const niveaux = []
+    for (let i = 1; i <= nb; i++) {
+      niveaux.push({
+        designation: NOMS[i-1] || `NIVEAU ${i}`,
+        h_mur: inputs["h"+i] ?? 2.5,
+        ep_mur: inputs["ep"+i] ?? 0.2,
+        dens_mur: inputs["dens"+i] ?? 2.2,
+        larg_plancher: inputs["larg"+i] ?? 3.0,
+        g_plancher: inputs["g"+i] ?? 0.25,
+        q_plancher: inputs["q"+i] ?? 0.15,
+      })
+    }
+    return {
+      niveaux,
+      profil: inputs.profil || "HEA120",
+      acier_metal: inputs.acier_metal || "S275",
+      L: inputs.L || 0.65,
+      nb_profiles: inputs.nb_profiles || 1,
+      fraction: (inputs.fraction || 100) / 100,
+    }
+  }
   if (pageId === "poutre-continue") {
     const nb = inputs.nb_travees || 3
     const travees = []
