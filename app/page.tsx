@@ -3,7 +3,8 @@
 import { useState, useRef } from "react"
 import { Sidebar, pageTitles } from "@/components/sidebar"
 import { MetricCards } from "@/components/metric-cards"
-import { InputForm, getDefaultInputs } from "@/components/input-form"
+import { InputForm, getDefaultInputs, ddcConfig, DDC_INTERVENTIONS, DDC_INTERVENTION_MAP,
+  DDC_LARGEUR_MAP, DDC_PLANCHER_MAP, DDC_USAGE_MAP, DDC_MAX_NIVEAUX, DDC_MAX_PONCTUELLES } from "@/components/input-form"
 import { ResultsPanel } from "@/components/results-panel"
 import { Button } from "@/components/ui/button"
 import { Calculator, Sparkles, RotateCcw } from "lucide-react"
@@ -51,27 +52,56 @@ function buildBody(inputs: any, pageId: string): any {
   if (pageId === "radier") return { ...inputs, pct_G: (inputs.pct_G||70)/100 }
   if (pageId === "voile") return { ...inputs, pct_G: (inputs.pct_G||70)/100 }
   if (pageId === "descente-charges") {
-    const NOMS = ["PH RDC","PH 1ER ETAGE","PH 2EME ETAGE","PH 3EME ETAGE","PH 4EME ETAGE","COMBLE"]
-    const nb = Math.min(inputs.nb_niveaux || 6, 6)
+    const interventionLabel = inputs.intervention || DDC_INTERVENTIONS[0]
+    const cfg = ddcConfig(interventionLabel)
+    const nb = Math.max(1, Math.min(DDC_MAX_NIVEAUX, Math.round(inputs.nb_niveaux || 3)))
     const niveaux = []
     for (let i = 1; i <= nb; i++) {
       niveaux.push({
-        designation: NOMS[i-1] || `NIVEAU ${i}`,
+        designation: inputs["nom"+i] || `Niveau ${i}`,
         h_mur: inputs["h"+i] ?? 2.5,
         ep_mur: inputs["ep"+i] ?? 0.2,
         dens_mur: inputs["dens"+i] ?? 2.2,
+        // Largeur de reprise : directe ou demi-portées (déterminée par le moteur)
+        mode_largeur: DDC_LARGEUR_MAP[inputs["modeLarg"+i]] || "directe",
         larg_plancher: inputs["larg"+i] ?? 3.0,
+        portee_gauche: inputs["pg"+i] ?? 0,
+        portee_droite: inputs["pd"+i] ?? 0,
+        // g : composition (catalogue) ou direct
+        type_plancher: DDC_PLANCHER_MAP[inputs["typePl"+i]] || "personnalise",
+        ep_dalle: inputs["epd"+i] ?? 0,
+        revetement: inputs["rev"+i] ?? 0,
+        cloisons: inputs["clo"+i] ?? 0,
         g_plancher: inputs["g"+i] ?? 0.25,
+        // q : usage (catalogue EC1) ou direct
+        usage: DDC_USAGE_MAP[inputs["usage"+i]] || "personnalise",
         q_plancher: inputs["q"+i] ?? 0.15,
+        nb_similaires: Math.max(1, Math.round(inputs["nbsim"+i] ?? 1)),
+      })
+    }
+    const ponctuelles = []
+    const np = Math.max(0, Math.min(DDC_MAX_PONCTUELLES, Math.round(inputs.nb_ponctuelles || 0)))
+    for (let i = 1; i <= np; i++) {
+      ponctuelles.push({
+        designation: inputs["pnom"+i] || `Charge ${i}`,
+        P_G: inputs["pG"+i] ?? 0,
+        P_Q: inputs["pQ"+i] ?? 0,
+        a: inputs["pa"+i] ?? 0,
       })
     }
     return {
+      intervention: cfg.key,
       niveaux,
+      ponctuelles,
       profil: inputs.profil || "HEA120",
       acier_metal: inputs.acier_metal || "S275",
-      L: inputs.L || 0.65,
+      L: inputs.L || 1.0,
       nb_profiles: inputs.nb_profiles || 1,
       fraction: (inputs.fraction || 100) / 100,
+      espacement_boulons: inputs.espacement_boulons ?? 0.5,
+      sigma_sol: cfg.fondations ? (inputs.sigma_sol ?? 0) : 0,
+      ep_mur_recepteur: cfg.mur ? (inputs.ep_mur_recepteur ?? 0) : 0,
+      sigma_adm_mur: cfg.mur ? (inputs.sigma_adm_mur ?? 0) : 0,
     }
   }
   if (pageId === "poutre-continue") {
