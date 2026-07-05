@@ -106,6 +106,24 @@ const RESULT_LABELS: Record<string, { label: string; unit: string }> = {
   As_about_retenu:    { label: "As about",                unit: "mm²/ml" },
   choix_about:        { label: "Choix about",             unit: "" },
   cisaillement_ok:    { label: "Cisaillement",            unit: "" },
+  // Descente de charges v2
+  intervention_label: { label: "Intervention",            unit: "" },
+  R_A_ELU:            { label: "Réaction appui A (ELU)",  unit: "kN" },
+  R_B_ELU:            { label: "Réaction appui B (ELU)",  unit: "kN" },
+  R_A_ELS:            { label: "Réaction appui A (ELS)",  unit: "kN" },
+  R_B_ELS:            { label: "Réaction appui B (ELS)",  unit: "kN" },
+  N_ELS_fond:         { label: "Fondations N (ELS)",      unit: "T/ml" },
+  N_ELU_fond:         { label: "Fondations N (ELU)",      unit: "kN/ml" },
+  B_semelle_requise:  { label: "Semelle filante requise B ≥", unit: "m" },
+  sigma_mur:          { label: "Contrainte maçonnerie σ", unit: "MPa" },
+  charge_boulon:      { label: "Effort ELS par boulon",   unit: "T" },
+}
+
+// Libellés/unités spécifiques à une page (résout la collision q_ELU dalle/DDC)
+const PAGE_LABEL_OVERRIDES: Record<string, Record<string, { label: string; unit: string }>> = {
+  "descente-charges": {
+    q_ELU: { label: "Charge ELU 1,35G+1,50Q", unit: "kN/ml" },
+  },
 }
 
 const SKIP_KEYS = new Set(["messages","norme","bidirectionnelle","fleche_ok","fissuration_ok",
@@ -121,21 +139,26 @@ const SKIP_KEYS = new Set(["messages","norme","bidirectionnelle","fleche_ok","fi
 
 function getRows(results: any, page: string) {
   if (!results) return []
+  const isDDC = page === "descente-charges"
+  const keepZero = new Set(["G_total","Q_total","G_kN","Q_kN"])
   return Object.entries(results)
     .filter(([k, v]) => 
       !SKIP_KEYS.has(k) && 
+      k !== "intervention" &&
       typeof v !== "object" && 
       typeof v !== "boolean" &&
-      v !== undefined && v !== null && v !== ""
+      v !== undefined && v !== null && v !== "" &&
+      // DDC : masquer les sorties non pertinentes pour l'intervention (à 0)
+      (!isDDC || v !== 0 || keepZero.has(k))
     )
     .map(([k, v]) => {
-      const def = RESULT_LABELS[k]
+      const def = PAGE_LABEL_OVERRIDES[page]?.[k] || RESULT_LABELS[k]
       const label = def?.label || k.replace(/_/g," ")
       const unit = def?.unit || ""
       const val = unit ? `${v} ${unit}` : String(v)
       return { label, value: val }
     })
-    .slice(0, 14)
+    .slice(0, isDDC ? 20 : 14)
 }
 
 // Génère les vérifications selon la page
@@ -148,6 +171,7 @@ function getVerifications(results: any, page: string) {
     sigma_ok:          { label: "Pression sol" },
     flexion_ok:        { label: "Flexion profilé (η ≤ 100%)" },
     fleche_ok:         { label: "Flèche ELS" },
+    mur_ok:            { label: "Contrainte maçonnerie (σ ≤ σ_adm)" },
     fissuration_ok:    { label: "Fissuration ELS" },
     cisaillement_ok:   { label: "Cisaillement" },
     lx_ly_ok:          { label: "Rapport Lx/Ly" },
@@ -164,6 +188,11 @@ function getVerifications(results: any, page: string) {
 
   Object.entries(boolFields).forEach(([key, cfg]) => {
     if (key in results) {
+      // Descente de charges : ne montrer que les vérifications actives
+      if (page === "descente-charges") {
+        if ((key === "flexion_ok" || key === "fleche_ok") && !results.MRd) return
+        if (key === "mur_ok" && !results.sigma_mur) return
+      }
       const val = results[key] as boolean
       const ok = cfg.invertOk ? !val : val
       verifs.push({ label: cfg.label, detail: ok ? "✓ Vérifié" : "✗ Non vérifié", status: ok ? "ok" : "danger" })
@@ -185,14 +214,68 @@ export function ResultsPanel({ results, activePage }: { results: any; activePage
 
   const rows = getRows(results, activePage || "")
   const verifications = getVerifications(results, activePage || "")
+  const isDDC = activePage === "descente-charges"
+  const sousTitre = isDDC
+    ? "Descente de charges EC0/EC1 — vérification Eurocode 3 (EN 1993-1-1)"
+    : "Calcul conforme Eurocode 2 (EN 1992-1-1)"
+  const detail: any[] = isDDC && Array.isArray(results.detail_niveaux) ? results.detail_niveaux : []
 
   return (
     <div className="rounded-lg border border-border bg-card shadow-sm">
       <div className="border-b border-border px-5 py-3.5">
         <h2 className="text-sm font-semibold text-foreground">Résultats du dimensionnement</h2>
-        <p className="text-xs text-muted-foreground">Calcul conforme Eurocode 2 (EN 1992-1-1)</p>
+        <p className="text-xs text-muted-foreground">{sousTitre}</p>
       </div>
       <div className="p-5">
+        {detail.length > 0 && (
+          <div className="mb-5">
+            <h3 className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Tableau de descente des charges (T/ml)
+            </h3>
+            <div className="overflow-x-auto rounded-md border border-border">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-border bg-muted/50 text-muted-foreground">
+                    <th className="px-2.5 py-2 text-left font-medium">Niveau</th>
+                    <th className="px-2.5 py-2 text-right font-medium">Larg. (m)</th>
+                    <th className="px-2.5 py-2 text-right font-medium">Mur g1</th>
+                    <th className="px-2.5 py-2 text-right font-medium">Plancher g2</th>
+                    <th className="px-2.5 py-2 text-right font-medium">q</th>
+                    <th className="px-2.5 py-2 text-right font-medium">G</th>
+                    <th className="px-2.5 py-2 text-right font-medium">Q</th>
+                    <th className="px-2.5 py-2 text-right font-medium">Cumul G</th>
+                    <th className="px-2.5 py-2 text-right font-medium">Cumul Q</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border font-mono">
+                  {detail.map((d, i) => (
+                    <tr key={i} title={d.provenance || ""} className={d.provenance ? "cursor-help" : ""}>
+                      <td className="px-2.5 py-1.5 font-sans text-foreground">{d.designation}</td>
+                      <td className="px-2.5 py-1.5 text-right">{d.largeur ?? "—"}</td>
+                      <td className="px-2.5 py-1.5 text-right">{d.g1}</td>
+                      <td className="px-2.5 py-1.5 text-right">{d.g2}</td>
+                      <td className="px-2.5 py-1.5 text-right">{d.q}</td>
+                      <td className="px-2.5 py-1.5 text-right font-semibold">{d.G}</td>
+                      <td className="px-2.5 py-1.5 text-right font-semibold">{d.Q}</td>
+                      <td className="px-2.5 py-1.5 text-right text-muted-foreground">{d.cumul_G ?? "—"}</td>
+                      <td className="px-2.5 py-1.5 text-right text-muted-foreground">{d.cumul_Q ?? "—"}</td>
+                    </tr>
+                  ))}
+                  <tr className="bg-muted/50 font-semibold">
+                    <td className="px-2.5 py-2 font-sans">TOTAL {results.G_total !== undefined && Number(results.intervention ? 1 : 1) ? "" : ""}</td>
+                    <td colSpan={4}></td>
+                    <td className="px-2.5 py-2 text-right">{results.G_total}</td>
+                    <td className="px-2.5 py-2 text-right">{results.Q_total}</td>
+                    <td colSpan={2} className="px-2.5 py-2 text-right font-sans text-[10px] text-muted-foreground">après fraction reprise</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p className="mt-1.5 text-[10px] text-muted-foreground">
+              Survolez une ligne pour voir la provenance des valeurs déterminées automatiquement (demi-portées, composition de plancher, usage).
+            </p>
+          </div>
+        )}
         <dl className="divide-y divide-border rounded-md border border-border">
           {rows.map(row => (
             <div key={row.label} className="flex items-center justify-between gap-4 px-3.5 py-2.5">
