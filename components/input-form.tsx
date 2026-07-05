@@ -11,6 +11,50 @@ const APPUIS = ["appuye","encastre","libre"]
 const APPUIS_POTEAU = ["encastre-rotule","rotule-rotule","encastre-encastre"]
 const ZONES_SISMIQUES = ["1","2","3","4"]
 
+// ── Descente de charges v2 : libellés affichés → clés backend ────────────────
+export const DDC_INTERVENTION_MAP: Record<string, string> = {
+  "Ouverture en mur porteur (linteau)":        "ouverture_mur",
+  "Grande baie / garage (portique)":           "grande_baie",
+  "Trémie de plancher (chevêtre)":             "chevetre",
+  "Renforcement de poutre (moisage)":          "moisage",
+  "Suppression de porteur (poutre de reprise)":"suppression_porteur",
+  "Reprise en sous-œuvre":                     "reprise_sous_oeuvre",
+  "Surélévation (vérification existant)":      "surelevation",
+  "Vérification mur / fondations":             "verification_mur",
+}
+export const DDC_INTERVENTIONS = Object.keys(DDC_INTERVENTION_MAP)
+
+export const DDC_LARGEUR_MAP: Record<string, string> = {
+  "Par portées des dalles (auto)": "portees",
+  "Directe (m)":                   "directe",
+}
+const DDC_MODES_LARGEUR = Object.keys(DDC_LARGEUR_MAP)
+
+export const DDC_PLANCHER_MAP: Record<string, string> = {
+  "Hourdis 12+4":           "hourdis_12_4",
+  "Hourdis 16+4":           "hourdis_16_4",
+  "Hourdis 20+4":           "hourdis_20_4",
+  "Hourdis 25+5":           "hourdis_25_5",
+  "Dalle pleine BA":        "dalle_pleine",
+  "Plancher bois":          "bois",
+  "Personnalisé (g direct)":"personnalise",
+}
+const DDC_PLANCHERS = Object.keys(DDC_PLANCHER_MAP)
+
+export const DDC_USAGE_MAP: Record<string, string> = {
+  "Habitation":              "habitation",
+  "Bureaux":                 "bureaux",
+  "Commerce":                "commerce",
+  "Escalier":                "escalier",
+  "Balcon":                  "balcon",
+  "Parking VL":              "parking_vl",
+  "Terrasse accessible":     "terrasse_accessible",
+  "Toiture inaccessible":    "toiture_inaccessible",
+  "Comble":                  "comble",
+  "Personnalisé (q direct)": "personnalise",
+}
+const DDC_USAGES = Object.keys(DDC_USAGE_MAP)
+
 type FieldDef = {
   key: string
   label: string
@@ -258,13 +302,10 @@ const PAGE_FORMS: Record<string, SectionDef[]> = {
     ]},
   ],
   "descente-charges": [
-    { title: "Profilé de renforcement", fields: [
-      { key:"profil",      label:"Profilé",          unit:"",  type:"select", options:PROFILES_METAL, default:"HEA120" },
-      { key:"acier_metal", label:"Acier",            unit:"",  type:"select", options:ACIERS_METAL,   default:"S275" },
-      { key:"L",           label:"Portée linteau",   unit:"m", type:"number", default:1.0, step:0.05, min:0.3 },
-      { key:"nb_profiles", label:"Profilés jumelés", unit:"",  type:"number", default:1, step:1, min:1 },
-      { key:"nb_niveaux",  label:"Nombre de niveaux",unit:"",  type:"number", default:3, step:1, min:1 },
-      { key:"fraction",    label:"Fraction reprise", unit:"%", type:"number", default:100, step:5, min:5 },
+    { title: "Nature de l'intervention", fields: [
+      { key:"intervention", label:"Intervention",       unit:"", type:"select", options:DDC_INTERVENTIONS, default:DDC_INTERVENTIONS[0] },
+      { key:"nb_niveaux",   label:"Niveaux repris (au-dessus)", unit:"", type:"number", default:3, step:1, min:1 },
+      { key:"fraction",     label:"Fraction reprise",   unit:"%", type:"number", default:100, step:5, min:5 },
     ]},
   ],
   "mur-soutenement": [
@@ -300,26 +341,113 @@ const DEFAULT_FORM: SectionDef[] = [
   ]},
 ]
 
-// ── Descente de charges : niveaux dynamiques ─────────────────────────────────
-export const DDC_MAX_NIVEAUX = 10
-function ddcNiveauSection(i: number): SectionDef {
-  return { title: `Niveau ${i}`, fields: [
-    { key:`nom${i}`,  label:"Désignation",      unit:"",     type:"text",   default:`Niveau ${i}` },
-    { key:`h${i}`,    label:"Hauteur mur",      unit:"m",    type:"number", default:2.5, step:0.1 },
-    { key:`ep${i}`,   label:"Épaisseur mur",    unit:"m",    type:"number", default:0.2, step:0.05 },
-    { key:`dens${i}`, label:"Densité mur",      unit:"T/m³", type:"number", default:2.2, step:0.1 },
-    { key:`larg${i}`, label:"Largeur plancher", unit:"m",    type:"number", default:3.0, step:0.25 },
-    { key:`g${i}`,    label:"g plancher",       unit:"T/m²", type:"number", default:0.25, step:0.05 },
-    { key:`q${i}`,    label:"q plancher",       unit:"T/m²", type:"number", default:0.15, step:0.05 },
+// ── Descente de charges v2 : l'ingénieur décrit sa structure ─────────────────
+export const DDC_MAX_NIVEAUX = 15
+export const DDC_MAX_PONCTUELLES = 3
+
+// Configuration de l'élément récepteur selon l'intervention (miroir backend)
+export function ddcConfig(interventionLabel: string) {
+  const k = DDC_INTERVENTION_MAP[interventionLabel] || "ouverture_mur"
+  return {
+    key: k,
+    poutre:     !["surelevation","verification_mur"].includes(k),
+    fondations: ["grande_baie","suppression_porteur","reprise_sous_oeuvre","surelevation","verification_mur"].includes(k),
+    mur:        ["surelevation","verification_mur"].includes(k),
+    moisage:    k === "moisage",
+  }
+}
+
+function ddcNiveauSection(i: number, inputs: Record<string, any>): SectionDef {
+  const fields: FieldDef[] = [
+    { key:`nom${i}`,      label:"Désignation",   unit:"",     type:"text",   default:`Niveau ${i}` },
+    { key:`h${i}`,        label:"Hauteur mur",   unit:"m",    type:"number", default:2.5, step:0.1 },
+    { key:`ep${i}`,       label:"Épaisseur mur", unit:"m",    type:"number", default:0.2, step:0.05 },
+    { key:`dens${i}`,     label:"Densité mur",   unit:"T/m³", type:"number", default:2.2, step:0.1 },
+    { key:`modeLarg${i}`, label:"Largeur reprise", unit:"",   type:"select", options:DDC_MODES_LARGEUR, default:DDC_MODES_LARGEUR[0] },
+  ]
+  // Largeur : demi-portées (auto) ou directe
+  const modeLarg = inputs[`modeLarg${i}`] ?? DDC_MODES_LARGEUR[0]
+  if (DDC_LARGEUR_MAP[modeLarg] === "portees") {
+    fields.push(
+      { key:`pg${i}`, label:"Portée dalle gauche", unit:"m", type:"number", default:0, step:0.1, min:0 },
+      { key:`pd${i}`, label:"Portée dalle droite", unit:"m", type:"number", default:0, step:0.1, min:0 },
+    )
+  } else {
+    fields.push({ key:`larg${i}`, label:"Largeur plancher", unit:"m", type:"number", default:3.0, step:0.25 })
+  }
+  // g : composition ou direct
+  fields.push({ key:`typePl${i}`, label:"Type de plancher", unit:"", type:"select", options:DDC_PLANCHERS, default:"Personnalisé (g direct)" })
+  const typePl = DDC_PLANCHER_MAP[inputs[`typePl${i}`] ?? "Personnalisé (g direct)"]
+  if (typePl === "personnalise") {
+    fields.push({ key:`g${i}`, label:"g plancher", unit:"T/m²", type:"number", default:0.25, step:0.05 })
+  } else {
+    if (typePl === "dalle_pleine")
+      fields.push({ key:`epd${i}`, label:"Épaisseur dalle", unit:"m", type:"number", default:0.16, step:0.02, min:0.04 })
+    fields.push(
+      { key:`rev${i}`, label:"Revêtement + plafond", unit:"T/m²", type:"number", default:0.10, step:0.05, min:0 },
+      { key:`clo${i}`, label:"Cloisons",             unit:"T/m²", type:"number", default:0,    step:0.05, min:0 },
+    )
+  }
+  // q : usage ou direct
+  fields.push({ key:`usage${i}`, label:"Usage du niveau", unit:"", type:"select", options:DDC_USAGES, default:"Habitation" })
+  if (DDC_USAGE_MAP[inputs[`usage${i}`] ?? "Habitation"] === "personnalise")
+    fields.push({ key:`q${i}`, label:"q plancher", unit:"T/m²", type:"number", default:0.15, step:0.05 })
+  // Étages courants identiques
+  fields.push({ key:`nbsim${i}`, label:"Étages identiques ×", unit:"", type:"number", default:1, step:1, min:1 })
+  return { title: `Niveau ${i}`, fields }
+}
+
+function ddcPonctuelleSection(i: number): SectionDef {
+  return { title: `Charge ponctuelle ${i}`, fields: [
+    { key:`pnom${i}`, label:"Désignation",  unit:"",  type:"text",   default:`Charge ${i}` },
+    { key:`pG${i}`,   label:"Gp permanent", unit:"T", type:"number", default:0, step:0.1, min:0 },
+    { key:`pQ${i}`,   label:"Qp exploitation", unit:"T", type:"number", default:0, step:0.1, min:0 },
+    { key:`pa${i}`,   label:"Position (depuis appui gauche)", unit:"m", type:"number", default:0.5, step:0.05, min:0 },
   ]}
 }
+
 function getSections(activePage: string, inputs: Record<string, any>): SectionDef[] {
   const base = PAGE_FORMS[activePage] || DEFAULT_FORM
   if (activePage !== "descente-charges") return base
+
+  const cfg = ddcConfig(inputs.intervention ?? DDC_INTERVENTIONS[0])
+  const sections: SectionDef[] = [...base]
+
+  // Élément récepteur : poutre de reprise / linteau
+  if (cfg.poutre) {
+    const poutre: FieldDef[] = [
+      { key:"profil",      label:"Profilé",          unit:"",  type:"select", options:PROFILES_METAL, default:"HEA120" },
+      { key:"acier_metal", label:"Acier",            unit:"",  type:"select", options:ACIERS_METAL,   default:"S275" },
+      { key:"L",           label:"Portée",           unit:"m", type:"number", default:1.0, step:0.05, min:0.3 },
+      { key:"nb_profiles", label:"Profilés jumelés", unit:"",  type:"number", default:1, step:1, min:1 },
+      { key:"nb_ponctuelles", label:"Charges ponctuelles", unit:"", type:"number", default:0, step:1, min:0 },
+    ]
+    if (cfg.moisage)
+      poutre.push({ key:"espacement_boulons", label:"Espacement boulons", unit:"m", type:"number", default:0.5, step:0.05, min:0.1 })
+    sections.push({ title: "Poutre de reprise", fields: poutre })
+  }
+
+  // Élément récepteur : mur existant
+  if (cfg.mur) sections.push({ title: "Mur existant vérifié", fields: [
+    { key:"ep_mur_recepteur", label:"Épaisseur du mur",   unit:"m",   type:"number", default:0.4, step:0.05, min:0.05 },
+    { key:"sigma_adm_mur",    label:"σ admissible maçonnerie", unit:"MPa", type:"number", default:0.6, step:0.1, min:0 },
+  ]})
+
+  // Élément récepteur : fondations
+  if (cfg.fondations) sections.push({ title: "Fondations", fields: [
+    { key:"sigma_sol", label:"Contrainte sol admissible", unit:"kPa", type:"number", default:200, step:25, min:0 },
+  ]})
+
+  // Charges ponctuelles sur la poutre
+  if (cfg.poutre) {
+    const np = Math.max(0, Math.min(DDC_MAX_PONCTUELLES, Math.round(inputs.nb_ponctuelles || 0)))
+    for (let i = 1; i <= np; i++) sections.push(ddcPonctuelleSection(i))
+  }
+
+  // Niveaux de la structure (du plus bas au plus haut)
   const nb = Math.max(1, Math.min(DDC_MAX_NIVEAUX, Math.round(inputs.nb_niveaux || 3)))
-  const niveaux: SectionDef[] = []
-  for (let i = 1; i <= nb; i++) niveaux.push(ddcNiveauSection(i))
-  return [...base, ...niveaux]
+  for (let i = 1; i <= nb; i++) sections.push(ddcNiveauSection(i, inputs))
+  return sections
 }
 
 // Valeurs par défaut pour chaque page
@@ -328,8 +456,26 @@ export function getDefaultInputs(pageId: string): Record<string, any> {
   const defaults: Record<string, any> = {}
   form.forEach(section => section.fields.forEach(f => { defaults[f.key] = f.default }))
   if (pageId === "descente-charges") {
+    // Énumérer toutes les clés possibles (champs conditionnels compris)
+    defaults["profil"] = "HEA120"; defaults["acier_metal"] = "S275"
+    defaults["L"] = 1.0; defaults["nb_profiles"] = 1; defaults["nb_ponctuelles"] = 0
+    defaults["espacement_boulons"] = 0.5
+    defaults["ep_mur_recepteur"] = 0.4; defaults["sigma_adm_mur"] = 0.6
+    defaults["sigma_sol"] = 200
+    for (let i = 1; i <= DDC_MAX_PONCTUELLES; i++) {
+      defaults[`pnom${i}`] = `Charge ${i}`; defaults[`pG${i}`] = 0
+      defaults[`pQ${i}`] = 0; defaults[`pa${i}`] = 0.5
+    }
     for (let i = 1; i <= DDC_MAX_NIVEAUX; i++) {
-      ddcNiveauSection(i).fields.forEach(f => { defaults[f.key] = f.default })
+      defaults[`nom${i}`] = `Niveau ${i}`
+      defaults[`h${i}`] = 2.5; defaults[`ep${i}`] = 0.2; defaults[`dens${i}`] = 2.2
+      defaults[`modeLarg${i}`] = DDC_MODES_LARGEUR[0]
+      defaults[`pg${i}`] = 0; defaults[`pd${i}`] = 0; defaults[`larg${i}`] = 3.0
+      defaults[`typePl${i}`] = "Personnalisé (g direct)"
+      defaults[`epd${i}`] = 0.16; defaults[`rev${i}`] = 0.10; defaults[`clo${i}`] = 0
+      defaults[`g${i}`] = 0.25
+      defaults[`usage${i}`] = "Habitation"; defaults[`q${i}`] = 0.15
+      defaults[`nbsim${i}`] = 1
     }
   }
   return defaults
@@ -343,7 +489,11 @@ export function InputForm({ inputs, onChange, activePage }: {
   const sections = getSections(activePage, inputs)
 
   const set = (key: string, val: string, type: "number" | "select" | "text") => {
-    onChange({ ...inputs, [key]: type === "number" ? (parseFloat(val) || 0) : val })
+    const next = { ...inputs, [key]: type === "number" ? (parseFloat(val) || 0) : val }
+    // Moisage : suggérer 50 % de reprise automatiquement
+    if (key === "intervention" && DDC_INTERVENTION_MAP[val] === "moisage" && (inputs.fraction ?? 100) === 100)
+      next.fraction = 50
+    onChange(next)
   }
 
   // MEd estimé pour poutre simple
