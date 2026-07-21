@@ -124,4 +124,147 @@ function SidebarContent({
       <nav className="flex-1 overflow-y-auto px-3 py-4" aria-label="Navigation principale">
         {groups.map((group) => (
           <div key={group.title} className="mb-5 last:mb-0">
-            <h3 className="px-2 pb-2 text-[11px]
+            <h3 className="px-2 pb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              {group.title}
+            </h3>
+            <ul className="flex flex-col gap-0.5">
+              {group.items.map((item) => (
+                <li key={item.id}>
+                  <button
+                    onClick={() => navigate(item.id)}
+                    className={cn(
+                      "flex w-full items-center gap-2.5 rounded-md px-2 py-2 text-sm font-medium transition-colors text-left",
+                      active === item.id
+                        ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                        : "text-sidebar-foreground/80 hover:bg-muted hover:text-sidebar-foreground",
+                    )}
+                  >
+                    <item.icon className="size-4 shrink-0" aria-hidden="true" />
+                    <span className="flex-1 truncate">{item.label}</span>
+                    {item.badge === "NEW" && (
+                      <span className="rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700">NEW</span>
+                    )}
+                    {item.badge === "IA" && (
+                      <span className="rounded-full bg-purple-100 px-1.5 py-0.5 text-[10px] font-semibold text-purple-700">IA</span>
+                    )}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </nav>
+
+      {/* Projet + user + déconnexion */}
+      <div className="border-t border-border px-4 py-3 flex flex-col gap-2">
+        <div>
+          <p className="text-[10px] text-muted-foreground mb-1">Projet actif</p>
+          <input
+            value={projet ?? ""}
+            onChange={e => onProjetChange?.(e.target.value)}
+            className="w-full rounded border border-border bg-background px-2 py-1 text-xs text-foreground outline-none focus:border-primary"
+            placeholder="Nom du projet"
+          />
+        </div>
+        <div>
+          <p className="text-[10px] text-muted-foreground mb-1">Ingénieur</p>
+          <input
+            value={ingenieur ?? ""}
+            onChange={e => onIngenieurChange?.(e.target.value)}
+            className="w-full rounded border border-border bg-background px-2 py-1 text-xs text-foreground outline-none focus:border-primary"
+            placeholder="Nom ingénieur"
+          />
+        </div>
+        <div className="flex items-center gap-3 mt-1">
+          <div className="flex size-8 items-center justify-center rounded-full bg-secondary text-xs font-semibold text-secondary-foreground">
+            ME
+          </div>
+          <div className="flex flex-col leading-tight flex-1">
+            <span className="text-xs font-medium text-sidebar-foreground">M. Eng.</span>
+            <span className="text-[11px] text-muted-foreground">Pro · v1.0</span>
+          </div>
+        </div>
+
+        {/* Bouton de déconnexion — texte visible, plus juste une icône */}
+        <button
+          onClick={() => signOut({ callbackUrl: "/" })}
+          className="mt-1 flex w-full items-center justify-center gap-2 rounded-md border border-border px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-600"
+        >
+          <LogOut className="size-3.5" />
+          Déconnexion
+        </button>
+      </div>
+    </>
+  )
+}
+
+export function Sidebar({ onNavigate, projet, onProjetChange, ingenieur, onIngenieurChange }: {
+  onNavigate?: (id: string) => void
+  projet?: string
+  onProjetChange?: (v: string) => void
+  ingenieur?: string
+  onIngenieurChange?: (v: string) => void
+}) {
+  const [active, setActive] = useState("poutre-simple")
+  const [mobileOpen, setMobileOpen] = useState(false)
+
+  const navigate = (id: string) => {
+    setActive(id)
+    activePageId = id
+    onNavigate?.(id)
+    setMobileOpen(false) // ferme le menu mobile après navigation
+  }
+
+  const sharedProps = { active, navigate, projet, onProjetChange, ingenieur, onIngenieurChange }
+
+  return (
+    <>
+      {/* ── DESKTOP sidebar (≥ lg) ── */}
+      <aside className="hidden lg:flex w-60 shrink-0 flex-col border-r border-border bg-sidebar">
+        <SidebarContent {...sharedProps} />
+      </aside>
+
+      {/* ── MOBILE top bar (< lg) ── */}
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-between border-b border-border bg-sidebar px-4 py-3">
+        <div className="flex items-center gap-2.5">
+          <div className="flex size-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
+            <Building2 className="size-4" aria-hidden="true" />
+          </div>
+          <span className="text-sm font-semibold text-sidebar-foreground">StructAI Pro</span>
+        </div>
+        <button
+          onClick={() => setMobileOpen(true)}
+          aria-label="Ouvrir le menu"
+          className="flex size-9 items-center justify-center rounded-md text-muted-foreground hover:bg-muted transition-colors"
+        >
+          <Menu className="size-5" />
+        </button>
+      </div>
+
+      {/* ── MOBILE drawer overlay ── */}
+      {mobileOpen && (
+        <div className="lg:hidden fixed inset-0 z-50 flex">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            onClick={() => setMobileOpen(false)}
+          />
+          {/* Drawer panel */}
+          <aside className="relative flex w-72 max-w-[85vw] flex-col border-r border-border bg-sidebar shadow-xl">
+            {/* Close button */}
+            <button
+              onClick={() => setMobileOpen(false)}
+              aria-label="Fermer le menu"
+              className="absolute top-3 right-3 flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted transition-colors z-10"
+            >
+              <X className="size-4" />
+            </button>
+            <SidebarContent {...sharedProps} />
+          </aside>
+        </div>
+      )}
+    </>
+  )
+}
+
+export { pageTitles }
